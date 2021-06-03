@@ -1,0 +1,16 @@
+name: circRNA_benchmark
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python>=3.6
+  - scikit-learn
+  - keras
+  - snakemake
+  - r-base
+  - r-essentials
+  - r-ggplot2
+  - r-randomforest
+  - r-proc
+  - r-caret
+  - r-stringr
