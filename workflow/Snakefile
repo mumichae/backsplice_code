@@ -3,14 +3,27 @@
 
 
 # Allow users to fix the underlying OS via singularity.
+# this container defines the underlying OS for each job when using the workflow
+# with --use-conda --use-singularity
 singularity: "docker://continuumio/miniconda3"
+
+configfile: "config/config.yaml"
+
+include: "rules/data.smk"
+include: "rules/benchmark.smk"
 
 
 rule all:
-    input:
-        # The first rule should define the default target files
-        # Subsequent target rules can be specified below. They should start with all_*.
+    input: config['rulegraph'], rules.all_benchmark.input
+    # The first rule should define the default target files
+    # Subsequent target rules can be specified below. They should start with all_*.
 
 
-include: "rules/common.smk"
-include: "rules/other.smk"
+rule dependency:
+    output: config['rulegraph']
+    shell:
+        """
+        snakemake --rulegraph | \
+          sed -ne '/digraph snakemake_dag/,/}}/p' | 
+          dot -Tsvg -Grankdir=TB > {output}
+        """

@@ -4,13 +4,16 @@ channels:
   - bioconda
 dependencies:
   - python>=3.6
+  - pandas
   - scikit-learn
   - keras
   - snakemake
   - r-base
   - r-essentials
+  - r-devtools
   - r-ggplot2
   - r-randomforest
   - r-proc
   - r-caret
   - r-stringr
+  - r-e1071
