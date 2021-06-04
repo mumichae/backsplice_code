@@ -1,4 +1,14 @@
 data: resources
 output: results
+rulegraph: dependency.svg
 
-# TODO: specify methods
+# intermediate file locations
+processed_data: results/processed_data
+models: results/models
+evaluation: results/evaluation
+
+methods:
+  - DeepCirCode
+  - circDeep
+  - SVM
+  - RandomForest
