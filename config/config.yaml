@@ -1,6 +1,9 @@
 data: resources
 output: results
-rulegraph: dependency.svg
+
+dependency_graph:
+    rulegraph: dependency_rulegraph.svg
+    dag: dependency_dag.svg
 
 # intermediate file locations
 processed_data: results/processed_data
