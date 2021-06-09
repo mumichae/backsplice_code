@@ -1,12 +1,20 @@
 # The main entry point of your workflow.
 # After configuring, running snakemake -n in a clone of this repository should successfully execute a dry-run of the workflow.
+import pandas as pd
+
+params = pd.read_csv("config/params.tsv",sep="\t")
 
 
-# Allow users to fix the underlying OS via singularity.
-# this container defines the underlying OS for each job when using the workflow
-# with --use-conda --use-singularity
+def get_wildcards(params, wildcards=None):
+    if wildcards is None:
+        wildcards = params.columns.tolist()
+    wildcards_dict = {}
+    for w in wildcards:
+        wildcards_dict[w] = params[w].tolist()
+    return wildcards_dict
+
+
 singularity: "docker://continuumio/miniconda3"
-
 configfile: "config/config.yaml"
 
 include: "rules/data.smk"
@@ -14,16 +22,24 @@ include: "rules/benchmark.smk"
 
 
 rule all:
-    input: config['rulegraph'], rules.all_benchmark.input
-    # The first rule should define the default target files
-    # Subsequent target rules can be specified below. They should start with all_*.
+    input:
+        unpack(lambda x: config['dependency_graph']),
+        rules.all_benchmark.input
+
+# The first rule should define the default target files
+# Subsequent target rules can be specified below. They should start with all_*.
 
 
 rule dependency:
-    output: config['rulegraph']
+    output:
+        rulegraph=config['dependency_graph']['rulegraph'],
+        dag=config['dependency_graph']['dag']
     shell:
         """
         snakemake --rulegraph | \
           sed -ne '/digraph snakemake_dag/,/}}/p' | 
-          dot -Tsvg -Grankdir=TB > {output}
+          dot -Tsvg -Grankdir=TB > {output.rulegraph}
+        snakemake --dag | \
+          sed -ne '/digraph snakemake_dag/,/}}/p' | 
+          dot -Tsvg -Grankdir=TB > {output.dag}
         """
