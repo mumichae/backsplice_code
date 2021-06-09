@@ -8,6 +8,8 @@ dependencies:
   - scikit-learn
   - keras
   - snakemake
+  - genomepy
+  - ucsc-wigtobigwig
   - r-base
   - r-essentials
   - r-devtools

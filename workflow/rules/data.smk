@@ -16,6 +16,50 @@ rule extract_circBase:
 
 # Reference files
 # TODO: download reference sequence (for features), gene annotation (for negative dataset)
+rule genomepy:
+    # Download reference sequence using genomepy
+    output:
+        protected(
+            multiext(config['processed_data'] + "/reference/{assembly}/{assembly}",
+                ".fa",".fa.fai",".fa.sizes",".annotation.gtf.gz",".annotation.bed.gz")
+        )
+    log: str(config['processed_data'] + "/reference/{assembly}/genomepy_{assembly}.log")
+    params:
+        provider="UCSC"  # optional, defaults to ucsc. Choose from ucsc, ensembl, and ncbi
+    cache: True  # mark as eligible for between workflow caching
+    shell:
+        """
+        genome_dir=$(dirname "{output[0]}")
+        genome_dir=$(dirname "$genome_dir")
+        echo downloading genome to: $genome_dir
+        genomepy install {wildcards.assembly} \
+            -p {params.provider} --annotation \
+            -g $genome_dir >> {log} 2>&1
+        """
+
+rule get_phastCons:
+    # Request fasta file for genome assembly specified in config
+    output:
+        multiext(
+            config['processed_data'] + '/reference/{assembly}/phastCons20way/{assembly}.phastCons20way',
+            '.wigFix.gz', '.bw'
+        )
+    params:
+        url = 'rsync://hgdownload.soe.ucsc.edu/goldenPath/{assembly}/phastCons20way/{assembly}.phastCons20way.wigFix.gz',
+        chrom_sizes= 'http://hgdownload.soe.ucsc.edu/goldenPath/{assembly}/bigZips/{assembly}.chrom.sizes'
+    shell:
+        """
+        rsync -avz --progress {params.url} {output[0]}
+        wigToBigWig {output[0]} {params.chrom_sizes} {output[1]}
+        """
+
+
+rule get_genome_references:
+    # Request fasta file for genome assembly specified in config
+    input:
+        expand(rules.genomepy.output,assembly=config['assembly']),
+        expand(rules.get_phastCons.output, assembly=config['assembly'])
+
 
 
 # Create datasets for training and evaluation

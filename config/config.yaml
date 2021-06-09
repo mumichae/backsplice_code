@@ -10,6 +10,9 @@ processed_data: results/processed_data
 models: results/models
 evaluation: results/evaluation
 
+# Global parameters
+assembly: hg38
+
 methods:
   - DeepCirCode
   - circDeep
