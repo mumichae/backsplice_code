@@ -1,0 +1,3 @@
+[submodule "methods/circDeep"]
+	path = methods/circDeep
+	url = https://github.com/UofLBioinformatics/circDeep
