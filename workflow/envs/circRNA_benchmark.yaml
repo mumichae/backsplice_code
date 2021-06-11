@@ -10,6 +10,8 @@ dependencies:
   - snakemake
   - genomepy
   - ucsc-wigtobigwig
+  - samtools
+  - rsync
   - r-base
   - r-essentials
   - r-devtools
