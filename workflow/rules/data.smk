@@ -1,29 +1,15 @@
-# circRNA databases (positive dataset)
-
-rule extract_circBase:
-    """
-    Retrieve circBase data and save it in a more usable format for training/test data
-    """
-    # input: # TODO circbase file/download
-    output: config['processed_data'] + '/db/circbase.tsv'
-    # script: # TODO R or python script
-    # shell: # (alternative to script)
-    #    """
-    #    <shell commands>
-    #   """
-
-# TODO add more databases
-
 # Reference files
-# TODO: download reference sequence (for features), gene annotation (for negative dataset)
+# Download reference sequence (for features), gene annotation (for negative dataset)
+
+canonical_chroms = [f'chr{i}' for i in list(range(1,23)) + ['X', 'Y']]
+
 rule genomepy:
     # Download reference sequence using genomepy
     output:
-        protected(
-            multiext(config['processed_data'] + "/reference/{assembly}/{assembly}",
-                ".fa",".fa.fai",".fa.sizes",".annotation.gtf.gz",".annotation.bed.gz")
+        multiext(
+            config['processed_data'] + "/reference/{assembly}/{assembly}",
+            ".fa",".fa.fai",".fa.sizes",".annotation.gtf.gz",".annotation.bed.gz"
         )
-    log: str(config['processed_data'] + "/reference/{assembly}/genomepy_{assembly}.log")
     params:
         provider="UCSC"  # optional, defaults to ucsc. Choose from ucsc, ensembl, and ncbi
     cache: True  # mark as eligible for between workflow caching
@@ -32,10 +18,13 @@ rule genomepy:
         genome_dir=$(dirname "{output[0]}")
         genome_dir=$(dirname "$genome_dir")
         echo downloading genome to: $genome_dir
-        genomepy install {wildcards.assembly} \
-            -p {params.provider} --annotation \
-            -g $genome_dir >> {log} 2>&1
+        genomepy install \
+            {wildcards.assembly} \
+            -p {params.provider} \
+            --annotation \
+            -g $genome_dir
         """
+
 
 rule get_phastCons:
     # Request fasta file for genome assembly specified in config
@@ -54,12 +43,57 @@ rule get_phastCons:
         """
 
 
+rule canonical_gtf:
+    input:
+        expand(rules.genomepy.output[3],assembly=config['assembly'])
+    output:
+        config['processed_data'] + "/reference/{assembly}/{assembly}.annotation.canonical.gtf"
+    params:
+        chroms = '|'.join(canonical_chroms)
+    shell:
+        """
+        zcat {input} | grep -E '{params.chroms}' > {output}
+        """
+
+
 rule get_genome_references:
     # Request fasta file for genome assembly specified in config
     input:
         expand(rules.genomepy.output,assembly=config['assembly']),
         expand(rules.get_phastCons.output, assembly=config['assembly'])
 
+
+# circRNA databases (positive dataset)
+
+rule extract_circBase:
+    """
+    Retrieve circBase data and save it in a more usable format for training/test data
+    """
+    # input: # TODO circbase file/download
+    output: config['processed_data'] + '/db/circbase.tsv'
+    # script: # TODO R or python script
+    # shell: # (alternative to script)
+    #    """
+    #    <shell commands>
+    #   """
+
+# TODO add more databases
+
+
+rule Chaabane2020:
+    input:
+        positive_bed = 'methods/circDeep/data/circRNA_dataset.bed',
+        negative_bed = 'methods/circDeep/data/negative_dataset.bed'
+    output:
+        positive_bed = config['processed_data'] + '/datasets/Chaabane2020/circRNA_dataset.bed',
+        negative_bed = config['processed_data'] + '/datasets/Chaabane2020/negative_dataset.bed'
+    params:
+        chroms='|'.join(canonical_chroms)
+    shell:
+        """
+        grep -E '({params.chroms})\t' {input.positive_bed} > {output.positive_bed}
+        grep -E '({params.chroms})\t' {input.negative_bed} > {output.negative_bed}
+        """
 
 
 # Create datasets for training and evaluation
