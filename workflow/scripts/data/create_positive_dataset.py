@@ -105,7 +105,7 @@ def get_circRNA_sequences (chromosomes, circRNAs, output_path):
 
         # write to output file
         sequence = sequence.seq
-        output.write(circ[4] + "\n")
+        output.write(">" + circ[4] + "\n")
         while len(sequence) > line_length:
             output.write(str(sequence[:line_length]) + "\n")
             sequence = sequence[line_length:]
