@@ -129,22 +129,22 @@ The `dag` shows all the different jobs that will be run, for every wildcard spec
 │   └── params.tsv           # table of wildcards constellations of methods
 ├── dependency_dag.svg       # dependency graph (all jobs)
 ├── dependency_rulegraph.svg # dependency graph (rules)
-├── methods
+├── methods                  # git repositories of some methods evaluated in the benchmark
 │   └── circDeep
 ├── README.md
-├── resources
-├── results
+├── resources                # resources used as input, will be downloaded with the repository
+├── results                  # directory for pipeline output
 │   ├── evaluation
 │   ├── logs
 │   ├── models
 │   └── processed_data
-└── workflow
-    ├── envs
-    ├── rules
-    ├── scripts
+└── workflow                 # snakemake pipeline files
+    ├── envs                 # conda environments used for the pipeline
+    ├── rules                # snakemake rules in snakefiles
+    ├── scripts              # scripts used in the pipeline
     │   ├── common.py
     │   ├── data   
     │   ├── evaluation
     │   └── models
-    └── Snakefile
+    └── Snakefile           # top-level snakefile, combines rules from workflow/rules
 ```
