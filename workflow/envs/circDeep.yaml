@@ -4,11 +4,13 @@ channels:
   - bioconda
 dependencies:
   - python>=3.6
+  - pip
   - matplotlib
-  - keras=1
+  - keras
   - tensorflow
   - scikit-learn
   - h5py
   - gensim
   - pysam>=0.9.1.4
   - pybigwig
+  - python-levenshtein
