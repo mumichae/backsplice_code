@@ -4,3 +4,6 @@
 [submodule "methods/circLGB-circMRT"]
 	path = methods/circLGB-circMRT
 	url = https://github.com/Peppags/circLGB-circMRT.git
+[submodule "methods/JEDI"]
+	path = methods/JEDI
+	url = https://github.com/hallogameboy/JEDI.git
