@@ -1,3 +1,6 @@
 [submodule "methods/circDeep"]
 	path = methods/circDeep
 	url = https://github.com/UofLBioinformatics/circDeep
+[submodule "methods/circLGB-circMRT"]
+	path = methods/circLGB-circMRT
+	url = https://github.com/Peppags/circLGB-circMRT.git
