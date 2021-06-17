@@ -1,0 +1,14 @@
+name: DeepCirCode
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - r-base>=3.0
+  - r-devtools
+  - python=2.7
+  - r-keras=2.2.4
+  - r-rocr=1.0_7
+  - r-reticulate=1
+  - keras=2.2.4
+  - tensorflow
+  - numpy
