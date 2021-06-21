@@ -70,8 +70,31 @@ rule extract_circBase:
     Retrieve circBase data and save it in a more usable format for training/test data
     """
     # input: # TODO circbase file/download
-    output: config['processed_data'] + '/db/circbase.tsv'
+    output: config['processed_data'] + '/datasets/circbase.tsv'
     # script: # TODO R or python script
+
+rule data_DiLiddo2019:
+    input: 'resources/high_conf_circ.tab'
+    output:
+        circRNA = config['processed_data'] + '/datasets/DiLiddo2019/circRNA.bed',
+        linear_1 = config['processed_data'] + '/datasets/DiLiddo2019/linear1.bed',
+        linear_2 = config['processed_data'] + '/datasets/DiLiddo2019/linear2.bed'
+    run:
+        import pandas as pd
+        raw_data = pd.read_table(input[0], sep='\t')
+        for col in raw_data:
+            bed_df = raw_data[col].str.split(':', expand=True)
+            if col == 'circRNA':
+                bed_df.columns = ['chrom', 'range', 'strand']
+            else:
+                bed_df.columns = ['chrom', 'range']
+                bed_df['strand'] = '.'
+            bed_df[['chromStart', 'chromEnd']] = bed_df.iloc[:, 1].str.split('-',expand=True)
+            bed_df['name'] = raw_data[col]
+            bed_df['score'] = '.'
+            bed_df = bed_df[['chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand']]
+            bed_df.to_csv(output[col], sep='\t', header=False, index=False)
+
 
 
 rule data_Chaabane2020:
@@ -103,6 +126,8 @@ rule data_Chaabane2020:
 def get_positive_data(wildcards, source=None):
     if source == "Chaabane2020":
         return rules.data_Chaabane2020.output.positive_bed
+    elif source == 'DiLiddo2019':
+        return rules.data_DiLiddo2019.output.circRNA
     return rules.extract_circBase.output[0]
 
 
@@ -145,7 +170,9 @@ rule subset_data:
         """
 
 
-def get_test_data(wildcards):
+def get_test_data(wildcards, source=None):
     if config["dev"]:
         return rules.subset_data.output.positive
+    if source == 'DiLiddo2019':
+        return rules.data_DiLiddo2019.output.circRNA
     return rules.split_train_test.output.test
