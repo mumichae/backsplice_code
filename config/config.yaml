@@ -9,6 +9,7 @@ dependency_graph:
 processed_data: results/processed_data
 models: results/models
 evaluation: results/evaluation
+dev: True
 
 # Global parameters
 assembly: hg38

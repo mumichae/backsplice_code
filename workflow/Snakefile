@@ -18,7 +18,6 @@ def get_wildcards(params, wildcards=None):
 singularity: "docker://continuumio/miniconda3"
 configfile: "config/config.yaml"
 
-include: "rules/data.smk"
 include: "rules/benchmark.smk"
 
 
