@@ -11,6 +11,8 @@ dependencies:
   - genomepy
   - ucsc-wigtobigwig
   - samtools
+  - biopython
+  - pybedtools
   - rsync
   - r-base
   - r-essentials
