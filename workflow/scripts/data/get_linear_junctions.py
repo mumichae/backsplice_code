@@ -59,9 +59,10 @@ def process_circ(file):
 
 
 def get_introns(circ, gtf_file):
-    # iterates through gtf file, spots transcripts that overlap with our circRNAs, writes down these introns
+    # iterates through gtf file, spots transcripts that overlap with our circRNAs, writes down these introns,
+    # as long as they're not already in the set of introns found.
     # introns: [chr, start, end, strand, transcript_id, intron_number]; 1-based, start and end inclusive
-    introns = []
+    introns = {}
     circ_flag = False
     end_last_exon = -1
     intron_number = 0
@@ -81,7 +82,7 @@ def get_introns(circ, gtf_file):
                     # means, we found a circRNA in this transcript
                     circ_flag = True
                     intron_number = 0
-                    #print(
+                    # print(
                     #    "in transcript " + chr + " " + str(start) + "-" + str(end) + ":" + strand +
                     #    " there is the circRNA " + str(circRNA))
                     break
@@ -91,7 +92,9 @@ def get_introns(circ, gtf_file):
                 # means, this is not the first exon of the transcript, so write down the intron
                 transcript_id = tabs[8].split("\"")[3]
                 intron_number += 1
-                introns.append([chr, end_last_exon + 1, start - 1, strand, transcript_id, intron_number])
+                introns[chr + ":" + str(end_last_exon + 1) + "-" + str(start - 1) + ":" + strand] =\
+                    [chr, end_last_exon + 1, start - 1, strand, transcript_id, intron_number]
+                # due to the dictionary structure duplicate exons are overwritten and don't appear twice in the output
             end_last_exon = end
 
     return introns
@@ -113,7 +116,7 @@ if __name__ == "__main__":
 
     # 4. write the introns to the output file
     output.write("# chr\tstart\tend\tstrand\ttranscript_id\tintron_number\n")
-    for intron in introns:
+    for intron in introns.values():
         # print(intron)
         output.write(str(intron[0]) + "\t" + str(intron[1]) + "\t" + str(intron[2]) + "\t" + str(intron[3]) + "\t" +
                      str(intron[4]) + "\t" + str(intron[5]) + "\n")
