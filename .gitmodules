@@ -7,3 +7,6 @@
 [submodule "methods/JEDI"]
 	path = methods/JEDI
 	url = https://github.com/hallogameboy/JEDI.git
+[submodule "methods/DeepCirCode"]
+	path = methods/DeepCirCode
+	url = https://github.com/BioDataLearning/DeepCirCode.git
