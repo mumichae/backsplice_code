@@ -1,6 +1,8 @@
 include: "data.smk"
 
-intermediate_dir = config['processed_data'] + '/intermediate'
+tmpdir = config['processed_data'] + '/tmp'
+prediction_pattern = config['evaluation'] + '/{method}/{source}_prediction.txt'
+
 
 rule train_circDeep:
     input:
@@ -11,8 +13,8 @@ rule train_circDeep:
         positive = rules.data_Chaabane2020.output.positive_bed,
         negative = rules.data_Chaabane2020.output.negative_bed,
     output:
-        model = directory(config['models'] + '/circDeep_retrained'),
-        intermediate_data = directory(intermediate_dir + '/circDeep_retrained')
+        model = config['models'] + '/circDeep/{source}/bestmodel_ACNN_BLSTM_3 1 408000.hdf5',
+        intermediate_data = directory(tmpdir + '/train/circDeep/{source}')
     conda:
         "../envs/circDeep.yaml"
     threads: 12
@@ -41,14 +43,14 @@ rule predict_circDeep:
         rcm_features = 'methods/circDeep/data/rcm_features.txt',
         conservation_features = 'methods/circDeep/data/conservation_features.txt',
         class_txt = 'methods/circDeep/data/class.txt',
-        test = rules.subset_data.output.positive,
-        model = 'methods/circDeep/models',  # rules.train_circDeep.output.model
+        test = rules.data_dev.output.positive,
+        model = rules.train_circDeep.output.model # 'methods/circDeep/models'
     output:
-        seq_features = intermediate_dir + '/circDeep/seq_features.txt',
-        rcm_features= intermediate_dir + '/circDeep/rcm_features.txt',
-        conservation_features= intermediate_dir + '/circDeep/conservation_features.txt',
-        class_txt= intermediate_dir + '/circDeep/class.txt',
-        prediction = config['evaluation'] + '/circDeep/prediction.txt'
+        seq_features = tmpdir + '/predict/circDeep/{source}/seq_features.txt',
+        rcm_features=tmpdir + '/predict/circDeep/{source}/predict/rcm_features.txt',
+        conservation_features=tmpdir + '/predict/circDeep/{source}/predict/conservation_features.txt',
+        class_txt=tmpdir + '/predict/circDeep/{source}/predict/class.txt',
+        prediction = expand(prediction_pattern, method="circDeep", allow_missing=True)
     conda:
         "../envs/circDeep.yaml"
     threads: 12
@@ -73,30 +75,6 @@ rule predict_circDeep:
         """
 
 
-rule train:
-    """
-    Train and optimise model on training data
-    """
-    input:
-        train=rules.split_train_test.output.train
-    output:
-        model=config['models'] + '/{method}/model_{language}.{suffix}'
-    script: '../scripts/models/train.{wildcards.language}'
-
-
-rule predict:
-    """
-    Prediction and evaluation on test data
-    Output metrics and processed_data
-    """
-    input:
-        model=rules.train.output.model,
-        test=rules.split_train_test.output.test
-    output:
-        prediction=config['models'] + '/{method}/prediction_{suffix}_{language}.tsv'
-    script: '../scripts/models/predict.{wildcards.language}'
-
-
 rule evaluation:
     """
     Compute evaluation metrics on all model predictions
@@ -104,7 +82,7 @@ rule evaluation:
     """
     input:
         predictions=expand(
-            rules.predict.output.prediction, zip, **get_wildcards(params)
+            prediction_pattern, zip, **get_wildcards(params)
         )
     output:
         metrics=config['evaluation'] + '/metrics.tsv'

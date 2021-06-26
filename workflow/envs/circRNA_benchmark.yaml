@@ -7,7 +7,7 @@ dependencies:
   - pandas
   - scikit-learn
   - keras
-  - snakemake
+  - snakemake>=6.5
   - genomepy
   - ucsc-wigtobigwig
   - samtools

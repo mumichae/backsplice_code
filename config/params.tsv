@@ -1,5 +1,5 @@
-method	suffix	language
-DeepCirCode	RDS	R
-circDeep	hdf5	py
-SVM	RDS	R
-RandomForest	RDS	R
+method	source
+#DeepCirCode	Chaabane2020
+circDeep	Chaabane2020
+#SVM	Chaabane2020
+#RandomForest	Chaabane2020
