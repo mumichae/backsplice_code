@@ -11,7 +11,7 @@ Parameters
     -gtf : str
         The file location of the gtf annotation
     -circ : str
-        The file location of the high confidence circRNA positions
+        The file location of the high confidence circRNA positions, as bed file
     -o : str
         The output file
 
@@ -41,20 +41,15 @@ def parser():
 def process_circ(file):
     # reads the high confidence circRNA locations and puts them into a dictionary
     # format: {'chr:start-end:strand':
-    #           chr, circ_start, circ_end, strand, linear1_start, linear1_end, linear2_start, linear2_end}
+    #           chr, circ_start, circ_end, strand}
     circ = {}
-    for line in file.readlines()[1:]:
-        tabs = line.split("\t")
-        circ_entry = tabs[0].split(":")
-        val = [circ_entry[0],  # chr
-               int(circ_entry[1].split("-")[0]),  # start, 0-based, inclusive
-               int(circ_entry[1].split("-")[1]),  # end, 0-based, inclusive
-               circ_entry[2],  # strand
-               int(tabs[1].split(":")[1].split("-")[0]),  # linear1_start, 1-based, inclusive
-               int(tabs[1].split(":")[1].split("-")[1]),  # linear1_end, 1-based, inclusive
-               int(tabs[2].split(":")[1].split("-")[0]),  # linear2_start, 1-based, inclusive
-               int(tabs[2].split(":")[1].split("-")[1])]  # linear2_end, 1-based, inclusive
-        circ[tabs[0]] = val
+    for line in file.readlines():
+        tabs = line.strip("\n").split("\t")
+        val = [tabs[0],         # chr
+               int(tabs[1]),    # start, 0-based, inclusive
+               int(tabs[2]),    # end, 0-based, inclusive
+               tabs[5]]         # strand
+        circ[tabs[3]] = val
     return circ
 
 
