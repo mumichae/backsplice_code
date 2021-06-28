@@ -3,7 +3,7 @@
 import pandas as pd
 from pathlib import Path
 
-params = pd.read_csv("config/params.tsv",sep="\t")
+params = pd.read_csv("config/params.tsv", sep="\t", comment='#')
 
 
 def get_wildcards(params, wildcards=None):

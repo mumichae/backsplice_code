@@ -13,7 +13,7 @@ Parameters
     -circ : str
         The file location of the high confidence circRNA positions, as bed file
     -o : str
-        The output folder
+        The output file
 
 Returns
 -------
@@ -33,7 +33,7 @@ def parser():
     parser.add_argument('-circ', type=str, required=True, dest='circ_file',
                         help='The file location of the high confidence circRNA positions')
     parser.add_argument('-o', type=str, required=True, dest='output_path',
-                        help='The output folder')
+                        help='The output BED file')
 
     return parser.parse_args()
 
@@ -102,7 +102,7 @@ if __name__ == "__main__":
     # 2. read files and process input data
     circRNA_file = open(args.circ_file, "r")
     gtf_file = open(args.gtf_file, "r")
-    output = open(args.output_path + "/negative_dataset_introns.bed", "w")
+    output = open(args.output_path, "w")
 
     circRNAs = process_circ(circRNA_file)
 

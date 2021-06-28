@@ -47,7 +47,7 @@ rule canonical_gtf:
     input:
         expand(rules.genomepy.output[3],assembly=config['assembly'])
     output:
-        config['processed_data'] + "/reference/{assembly}/{assembly}.annotation.canonical.gtf"
+        config['processed_data'] + f"/reference/{config['assembly']}/{config['assembly']}.annotation.canonical.gtf"
     params:
         chroms='|'.join(canonical_chroms)
     shell:
@@ -63,15 +63,7 @@ rule get_genome_references:
         expand(rules.get_phastCons.output,assembly=config['assembly'])
 
 
-# circRNA databases (positive dataset)
-
-rule extract_circBase:
-    """
-    Retrieve circBase data and save it in a more usable format for training/test data
-    """
-    # input: # TODO circbase file/download
-    output: config['processed_data'] + '/datasets/circbase.tsv'
-    # script: # TODO R or python script
+# circRNA junctions (positive dataset)
 
 rule data_DiLiddo2019:
     input: 'resources/high_conf_circ.tab'
@@ -96,21 +88,20 @@ rule data_DiLiddo2019:
             bed_df.to_csv(output[col], sep='\t', header=False, index=False)
 
 
-
 rule data_Chaabane2020:
     """
     Dataset used by Chaabane et al. 2020 (circDeep)
-    processed negative and positive datasets, as well as test data
-    BED file format
+    Processed negative (GENCODE lncRNAs) and positive (circRNADb) datasets, as well as test data
+    Subset to canonical chromosomes
     """
     input:
         positive_bed='methods/circDeep/data/circRNA_dataset.bed',
         negative_bed='methods/circDeep/data/negative_dataset.bed',
         test_bed='methods/circDeep/data/negative_dataset.bed'
     output:
-        positive_bed=config['processed_data'] + '/datasets/Chaabane2020/circRNA_dataset.bed',
-        negative_bed=config['processed_data'] + '/datasets/Chaabane2020/negative_dataset.bed',
-        test_bed=config['processed_data'] + '/datasets/Chaabane2020/test_dataset.bed'
+        positive_bed=config['processed_data'] + '/datasets/Chaabane2020/circRNA.bed',
+        negative_bed=config['processed_data'] + '/datasets/Chaabane2020/negative.bed',
+        test_bed=config['processed_data'] + '/datasets/Chaabane2020/test.bed'
     params:
         chroms='|'.join(canonical_chroms)
     shell:
@@ -121,20 +112,75 @@ rule data_Chaabane2020:
         """
 
 
-# Getters for positive and negative datasets
+rule data_Wang2019:
+    """
+    Dataset used by Wang et al. 2019 (DeepCirCode)
+    Processed negative (GENCODE lncRNAs) and positive (circRNADb & circBase) datasets
+    """
+    input:
+        positive='resources/Wang2019/human_positive.tsv',
+        negative='resources/Wang2019/human_negative.tsv'
+    output:
+        positive=config['processed_data'] + '/datasets/Wang2019/circRNA.bed',
+        negative=config['processed_data'] + '/datasets/Wang2019/negative.bed'
+    run:
+        import pandas as pd
+        for i, file in enumerate(input):
+            df = pd.read_table(
+                file,
+                skiprows=1,
+                usecols=[0,1,2,3,4],
+                names=['chr', 'start', 'end', 'strand', 'name'],
+                sep='\t'
+            )
+            df['score'] = '.'
+            df[['chr', 'start', 'end', 'name', 'score', 'strand']].to_csv(
+                output[i],
+                index=False,
+                header=False,
+                sep="\t"
+            )
+
+
 
 def get_positive_data(wildcards, source=None):
+    if source is None:
+        try:
+            source = wildcards.source
+        except:
+            raise LookupError("Must define a valid source as wildcard or parameter")
+
     if source == "Chaabane2020":
         return rules.data_Chaabane2020.output.positive_bed
     elif source == 'DiLiddo2019':
         return rules.data_DiLiddo2019.output.circRNA
-    return rules.extract_circBase.output[0]
+    else:
+        raise LookupError(f'"{source}" not a valid data source')
+
+
+# processed negative data
+
+rule get_linear_junctions:
+    """
+    Get linear junctions subset to circular junctions
+    """
+    input:
+        gtf='methods/circDeep/data/circRNA_dataset.bed',
+        circ=get_positive_data
+    output:
+        junctions=config['processed_data'] + '/datasets/gene_annotation/linear_junctions-{source}.bed'
+    script: '../scripts/data/get_linear_junctions.py'
 
 
 def get_negative_data(wildcards, source=None):
+    if source is None:
+        try:
+            source = wildcards.source
+        except:
+            raise LookupError("Must define a valid source as wildcard or parameter")
     if source == "Chaabane2020":
         return rules.data_Chaabane2020.output.negative_bed
-    return rules.canonical_gtf.output[0]
+    return expand(rules.get_linear_junctions.output.junctions, source=source)[0]
 
 
 # Create datasets for training and evaluation
@@ -148,12 +194,13 @@ rule split_train_test:
         positive=get_positive_data,
         negative=get_negative_data
     output:
-        train=config['processed_data'] + '/train.tsv',
-        test=config['processed_data'] + '/test.tsv'
-    script: '../data/split_train_test.py'
+        positive=config['processed_data'] + '/datasets/train_data/positive_{source}.tsv',
+        negative=config['processed_data'] + '/datasets/train_data/negative_{source}.tsv',
+        test=config['processed_data'] + '/datasets/test_data/{source}.tsv'
+    script: '../scripts/data/split_train_test.py'
 
 
-rule subset_data:
+rule data_dev:
     """
     Subset data purely for development
     """
@@ -172,7 +219,7 @@ rule subset_data:
 
 def get_test_data(wildcards, source=None):
     if config["dev"]:
-        return rules.subset_data.output.positive
+        return rules.data_dev.output.positive
     if source == 'DiLiddo2019':
         return rules.data_DiLiddo2019.output.circRNA
     return rules.split_train_test.output.test
