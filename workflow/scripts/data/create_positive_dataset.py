@@ -1,6 +1,6 @@
 """Create Positive Dataset
 
-This script creates the circRNA positive dataset using:
+This script creates a circRNA positive dataset using:
 - the human genome sequence in hg 38,
 - the bed file from circBase (liftover to hg38 already done with
   the UCSC tool (http://genome.ucsc.edu/cgi-bin/hgLiftOver)), and

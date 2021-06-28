@@ -27,7 +27,7 @@ import argparse
 def parser():
     # uses argparse to parse the command line arguments
     # returns the parsed arguments
-    parser = argparse.ArgumentParser(description='Create Positive Dataset')
+    parser = argparse.ArgumentParser(description='Get Linear Junctions')
     parser.add_argument('-gtf', type=str, required=True, dest='gtf_file',
                         help='The file location of the gtf annotation')
     parser.add_argument('-circ', type=str, required=True, dest='circ_file',
