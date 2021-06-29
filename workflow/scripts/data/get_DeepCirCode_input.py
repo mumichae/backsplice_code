@@ -56,38 +56,40 @@ def process_bed(positive, negative):
     for line in positive.readlines():
         # 0-based, both start and end are inclusive
         # format: chr \t start \t end \t name \t '.' \t strand \n
-        line = line.strip("\n").split('\t')
-        chr = line[0]
-        start = int(line[1])
-        end = int(line[2])
-        strand = line[5]
-        name = line[3]
-        # in the bed files, the chromosome is sometimes eg "chr17_GL000258v2_alt" instead of "chr17"
-        # this would lead to key errors later on
-        # -> take substring if required
-        # if "alt" in chr:
-        #    chr = chr.partition("_")[0]     # use string before the first occurrence of "_"
+        if line[0] != "#":
+            line = line.strip("\n").split('\t')
+            chr = line[0]
+            start = int(line[1])
+            end = int(line[2])
+            strand = line[5]
+            name = line[3]
+            # in the bed files, the chromosome is sometimes eg "chr17_GL000258v2_alt" instead of "chr17"
+            # this would lead to key errors later on
+            # -> take substring if required
+            # if "alt" in chr:
+            #    chr = chr.partition("_")[0]     # use string before the first occurrence of "_"
 
-        # '1' is the positive label
-        dataset.append(['1', chr, int(start), int(end), strand, name])
+            # '1' is the positive label
+            dataset.append(['1', chr, int(start), int(end), strand, name])
 
-    for line in negative.readlines()[1:]:
+    for line in negative.readlines():
         # 1-based, both start and end are inclusive
-        # format: chr \t start \t end \t strand \t transcript_id \t intron_number \n
-        line = line.strip("\n").split("\t")
-        chr = line[0]
-        start = int(line[1]) - 1  # -1 to make it 0-based
-        end = int(line[2]) - 1    # -1 to make it 0-based
-        strand = line[3]
-        name = chr + ":" + str(start) + "-" + str(end) + ":" + strand
-        # in the bed files, the chromosome is sometimes eg "chr17_GL000258v2_alt" instead of "chr17"
-        # this would lead to key errors later on
-        # -> take substring if required
-        # if "alt" in chr:
-        #    chr = chr.partition("_")[0]  # use string before the first occurrence of "_"
+        # format: chr \t start \t end \t name \t '.' \t strand \n
+        if line[0] != "#":
+            line = line.strip("\n").split("\t")
+            chr = line[0]
+            start = int(line[1]) - 1  # -1 to make it 0-based
+            end = int(line[2]) - 1    # -1 to make it 0-based
+            strand = line[5]
+            name = line[3]
+            # in the bed files, the chromosome is sometimes eg "chr17_GL000258v2_alt" instead of "chr17"
+            # this would lead to key errors later on
+            # -> take substring if required
+            # if "alt" in chr:
+            #    chr = chr.partition("_")[0]  # use string before the first occurrence of "_"
 
-        # '0' is the negative dataset label
-        dataset.append(['0', chr, int(start), int(end), strand, name])
+            # '0' is the negative dataset label
+            dataset.append(['0', chr, int(start), int(end), strand, name])
 
     return dataset
 
