@@ -44,15 +44,19 @@ rule get_phastCons:
 
 
 rule canonical_gtf:
-    input:
-        expand(rules.genomepy.output[3],assembly=config['assembly'])
     output:
-        config['processed_data'] + f"/reference/{config['assembly']}/{config['assembly']}.annotation.canonical.gtf"
+        config['processed_data'] + f"/reference/{config['assembly']}/{config['assembly']}.ensembl.canonical.gtf"
     params:
-        chroms='|'.join(canonical_chroms)
+        chroms='|'.join(canonical_chroms),
+        url=config['gene_annotations']['url'],
+        chr_prefix=config['gene_annotations']['chr_prefix']
     shell:
         """
-        zcat {input} | grep -E '{params.chroms}' > {output}
+        wget -nc {params.url} -O {output}.gz
+        zcat {output}.gz \
+            | grep -v '#' \
+            | sed 's/^/{params.chr_prefix}/' \
+            | grep -E 'transcript_support_level "1";' > {output}
         """
 
 
@@ -71,6 +75,7 @@ rule get_genome_references:
     # Request fasta file for genome assembly specified in config
     input:
         expand(rules.genomepy.output,assembly=config['assembly']),
+        expand(rules.canonical_gtf.output,assembly=config['assembly']),
         expand(rules.get_phastCons.output,assembly=config['assembly'])
 
 
@@ -169,7 +174,6 @@ rule data_Wang2019:
             if config["assembly"] == "hg38":
                 bed = bed.liftover(input.chainfile)
             bed.saveas(output[i])
-
 
 
 def get_positive_data(wildcards, source=None):
