@@ -85,18 +85,33 @@ rule data_DiLiddo2019:
     run:
         import pandas as pd
         raw_data = pd.read_table(input[0], sep='\t')
+        bed_dfs = {}
+        strand = '.'
+
         for col in raw_data:
-            bed_df = raw_data[col].str.split(':', expand=True)
+            df = raw_data[col].str.split(':', expand=True)
             if col == 'circRNA':
-                bed_df.columns = ['chrom', 'range', 'strand']
+                # strand only saved for circRNA BSJ
+                df.columns = ['chrom', 'range', 'strand']
+                # save strand information for other dfs
+                strand = df['strand']
             else:
-                bed_df.columns = ['chrom', 'range']
-                bed_df['strand'] = '.'
+                df.columns = ['chrom', 'range']
+            bed_dfs[col] = df
+
+        for name, bed_df in bed_dfs.items():
             bed_df[['chromStart', 'chromEnd']] = bed_df.iloc[:, 1].str.split('-',expand=True)
-            bed_df['name'] = raw_data[col]
+            bed_df['name'] = raw_data[name]
             bed_df['score'] = '.'
+
+            if name != 'circRNA':
+                # use same strand info as circRNA BSJ
+                bed_df['strand'] = strand
+                # linear junctions are 1-based -> convert to 0-based
+                bed_df['chromStart'] = bed_df['chromStart'].astype(int) - 1
+
             bed_df = bed_df[['chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand']]
-            bed_df.to_csv(output[col], sep='\t', header=False, index=False)
+            bed_df.to_csv(output[name], sep='\t', header=False, index=False)
 
 
 rule data_Chaabane2020:
