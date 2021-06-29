@@ -13,6 +13,7 @@ dependencies:
   - samtools
   - biopython
   - pybedtools
+  - ucsc-liftover
   - rsync
   - r-base
   - r-essentials

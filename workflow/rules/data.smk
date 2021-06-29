@@ -56,6 +56,17 @@ rule canonical_gtf:
         """
 
 
+rule download_chainfile:
+    output: config['processed_data'] + '/reference/hg19ToHg38.over.chain'
+    params:
+        url='ftp://hgdownload.cse.ucsc.edu/goldenPath/hg19/liftOver/hg19ToHg38.over.chain.gz'
+    shell:
+        """
+        wget --timestamping {params.url} -O {output}.gz
+        gunzip {output}.gz
+        """
+
+
 rule get_genome_references:
     # Request fasta file for genome assembly specified in config
     input:
@@ -119,27 +130,30 @@ rule data_Wang2019:
     """
     input:
         positive='resources/Wang2019/human_positive.tsv',
-        negative='resources/Wang2019/human_negative.tsv'
+        negative='resources/Wang2019/human_negative.tsv',
+        chainfile= rules.download_chainfile.output[0]
     output:
         positive=config['processed_data'] + '/datasets/Wang2019/circRNA.bed',
         negative=config['processed_data'] + '/datasets/Wang2019/negative.bed'
     run:
         import pandas as pd
-        for i, file in enumerate(input):
+        import pybedtools
+
+        for i, file in enumerate([input.positive, input.negative]):
             df = pd.read_table(
                 file,
                 skiprows=1,
                 usecols=[0,1,2,3,4],
-                names=['chr', 'start', 'end', 'strand', 'name'],
+                names=['chrom', 'chromStart', 'chromEnd', 'strand', 'name'],
                 sep='\t'
             )
             df['score'] = '.'
-            df[['chr', 'start', 'end', 'name', 'score', 'strand']].to_csv(
-                output[i],
-                index=False,
-                header=False,
-                sep="\t"
+            bed = pybedtools.BedTool.from_dataframe(
+                df[['chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand']]
             )
+            if config["assembly"] == "hg38":
+                bed = bed.liftover(input.chainfile)
+            bed.saveas(output[i])
 
 
 
@@ -154,6 +168,8 @@ def get_positive_data(wildcards, source=None):
         return rules.data_Chaabane2020.output.positive_bed
     elif source == 'DiLiddo2019':
         return rules.data_DiLiddo2019.output.circRNA
+    elif source == 'Wang2019':
+        return rules.data_Wang2019.output.positive
     else:
         raise LookupError(f'"{source}" not a valid data source')
 
@@ -165,7 +181,7 @@ rule get_linear_junctions:
     Get linear junctions subset to circular junctions
     """
     input:
-        gtf='methods/circDeep/data/circRNA_dataset.bed',
+        gtf=rules.canonical_gtf.output[0],
         circ=get_positive_data
     output:
         junctions=config['processed_data'] + '/datasets/gene_annotation/linear_junctions-{source}.bed'
