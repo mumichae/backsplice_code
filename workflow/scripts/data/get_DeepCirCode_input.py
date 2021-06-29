@@ -20,8 +20,13 @@ Parameters
 
 Returns
 -------
-    deepCirCode_input.tsv
+    deepCirCode_test.tsv
         table of the input data, containing the label, sequence, encoded sequence and junction name
+    deepCirCode_x_test.txt
+        only the encoded sequences
+    deepCirCode_y_test.txt
+        only the label: 01 for positive, 10 for negative
+
 """
 
 import argparse
@@ -108,7 +113,7 @@ def get_sequences(chromosomes, dataset):
     return output
 
 
-def encode_and_write(dataset, output):
+def encode_and_write(dataset, output, output_x, output_y):
     # creates one-hot-encoding for the extracted sequences and writes everything to the output file
     encoder = {"A": "1000",
                "T": "0100",
@@ -120,6 +125,8 @@ def encode_and_write(dataset, output):
         for residue in data_point[1]:
             enc += encoder[residue]
         output.write(data_point[0] + "\t" + data_point[1] + "\t" + enc + "\t" + data_point[2] + "\n")
+        output_x.write(enc + "\n")
+        output_y.write(str(abs(int(data_point[0])-1)) + data_point[0] + "\n")
 
 
 if __name__ == "__main__":
@@ -137,7 +144,13 @@ if __name__ == "__main__":
     dataset = get_sequences(chromosomes, dataset)
 
     # 4. get one-hot-encoding and write output
-    output = open(args.output_path + "/deepCirCode_input.tsv", "w")
-    encode_and_write(dataset, output)
+    output = open(args.output_path + "/deepCirCode_test.tsv", "w")
+    output_x = open(args.output_path + "/deepCirCode_x_test.txt", "w")
+    output_y = open(args.output_path + "/deepCirCode_y_test.txt", "w")
+    encode_and_write(dataset, output, output_x, output_y)
     output.flush()
+    output_x.flush()
+    output_y.flush()
     output.close()
+    output_x.close()
+    output_y.close()
