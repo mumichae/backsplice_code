@@ -110,10 +110,10 @@ if __name__ == "__main__":
     introns = get_introns(circRNAs, gtf_file)
 
     # 4. write the introns to the output file
-    output.write("# chr\tstart\tend\tstrand\ttranscript_id\tintron_number\n")
+    output.write("# chr\tstart\tend\tname\tscore\tstrand\n")
     for intron in introns.values():
         # print(intron)
-        output.write(str(intron[0]) + "\t" + str(intron[1]) + "\t" + str(intron[2]) + "\t" + str(intron[3]) + "\t" +
-                     str(intron[4]) + "\t" + str(intron[5]) + "\n")
+        output.write(str(intron[0]) + "\t" + str(intron[1]) + "\t" + str(intron[2]) + "\t" +
+                     str(intron[4]) + "." + str(intron[5]) + "\t.\t" + str(intron[3]) + "\n")
     output.flush()
     output.close()
