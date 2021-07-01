@@ -1,7 +1,7 @@
 """ Get Linear Junctions
 
 This script creates the coordinates of the circRNA negative dataset using:
-- the high confidence circRNA coordinates from Andre's dataset.
+- the high confidence circRNA coordinates from a positive dataset.
 - the gtf annotation of the human genome.
 
 This script requires to be run within our conda environment.
@@ -54,11 +54,11 @@ def process_circ(file):
 
 
 def get_introns(circ, gtf_file):
-    # iterates through gtf file, spots transcripts that overlap with our circRNAs, writes down these introns,
-    # as long as they're not already in the set of introns found.
-    # introns: [chr, start, end, strand, transcript_id, intron_number]; 1-based, start and end inclusive
+    # iterates through gtf file, spots transcripts that overlap with our circRNAs,
+    # writes down the flanking or overlapping introns, as long as they're not already in the set of introns found.
+    # introns: [chr, start, end, strand, transcript_id]; 1-based, start and end inclusive
     introns = {}
-    circ_flag = False
+    matching_circs = []
     end_last_exon = -1
     intron_number = 0
 
@@ -70,26 +70,33 @@ def get_introns(circ, gtf_file):
         strand = tabs[6]
 
         if tabs[2] == "transcript":  # new transcript, check if it overlaps with a circRNA
-            circ_flag = False
+            matching_circs = []
             end_last_exon = -1
             for circRNA in circ.values():
                 if circRNA[0] == chr and circRNA[1] >= start - 1 and circRNA[2] <= end - 1 and circRNA[3] == strand:
                     # means, we found a circRNA in this transcript
-                    circ_flag = True
-                    intron_number = 0
+                    matching_circs.append(circRNA)
+                    # intron_number = 0
                     # print(
                     #    "in transcript " + chr + " " + str(start) + "-" + str(end) + ":" + strand +
                     #    " there is the circRNA " + str(circRNA))
                     break
 
-        elif tabs[2] == "exon" and circ_flag:
+        elif tabs[2] == "exon" and matching_circs != []:
             if end_last_exon != -1:
-                # means, this is not the first exon of the transcript, so write down the intron
-                transcript_id = tabs[8].split("\"")[3]
-                intron_number += 1
-                introns[chr + ":" + str(end_last_exon + 1) + "-" + str(start - 1) + ":" + strand] =\
-                    [chr, end_last_exon + 1, start - 1, strand, transcript_id, intron_number]
-                # due to the dictionary structure duplicate exons are overwritten and don't appear twice in the output
+                # means, this is not the first exon of the transcript, so write down the intron, if it's flanking
+                for c in matching_circs:
+                    if c[1] == start - 1 or \
+                            c[2] == end_last_exon or\
+                            (c[1] > end_last_exon and c[2] < start - 1):
+                        # case 1: this exon's start is the backsplice site 1 -> save the last intron
+                        # case 2: the last exon's end is the backsplice site 2 -> save the last intron
+                        # case 3: the circRNA is spliced out in this transcript -> save the intron including the circRNA
+
+                        transcript_id = tabs[8].split("\"")[3]
+                        introns[chr + ":" + str(end_last_exon + 1) + "-" + str(start - 1) + ":" + strand] =\
+                            [chr, end_last_exon + 1, start - 1, strand, transcript_id]
+                        # due to the dictionary structure duplicate exons are overwritten and don't appear twice in the output
             end_last_exon = end
 
     return introns
@@ -110,10 +117,10 @@ if __name__ == "__main__":
     introns = get_introns(circRNAs, gtf_file)
 
     # 4. write the introns to the output file
-    output.write("# chr\tstart\tend\tname\tscore\tstrand\n")
+    output.write("# chr\tstart\tend\tname\tscore\tstrand\ttranscript\n")
     for intron in introns.values():
         # print(intron)
-        output.write(str(intron[0]) + "\t" + str(intron[1]) + "\t" + str(intron[2]) + "\t" +
-                     str(intron[4]) + "." + str(intron[5]) + "\t.\t" + str(intron[3]) + "\n")
+        output.write(str(intron[0]) + "\t" + str(intron[1]) + "\t" + str(intron[2]) + "\t.\t.\t" +
+                     str(intron[3]) + "\t" + str(intron[4]) + "\n")
     output.flush()
     output.close()
