@@ -14,6 +14,14 @@ dev: True
 # Global parameters
 assembly: hg38
 
+gene_annotations:
+  hg19:
+    chr_prefix: chr
+    url: http://ftp.ensembl.org/pub/grch37/current/gtf/homo_sapiens/Homo_sapiens.GRCh37.87.chr.gtf.gz
+  hg38:
+    chr_prefix: chr
+    url: ftp.ensembl.org/pub/release-104/gtf/homo_sapiens/Homo_sapiens.GRCh38.104.chr.gtf.gz
+
 methods:
   - DeepCirCode
   - circDeep
