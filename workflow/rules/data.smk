@@ -2,6 +2,7 @@
 # Download reference sequence (for features), gene annotation (for negative dataset)
 
 canonical_chroms = [f'chr{i}' for i in list(range(1,23)) + ['X', 'Y']]
+assembly = config['assembly']
 
 rule genomepy:
     # Download reference sequence using genomepy
@@ -48,8 +49,8 @@ rule canonical_gtf:
         config['processed_data'] + f"/reference/{config['assembly']}/{config['assembly']}.ensembl.canonical.gtf"
     params:
         chroms='|'.join(canonical_chroms),
-        url=config['gene_annotations']['url'],
-        chr_prefix=config['gene_annotations']['chr_prefix']
+        url=config['gene_annotations'][assembly]['url'],
+        chr_prefix=config['gene_annotations'][assembly]['chr_prefix']
     shell:
         """
         wget -nc {params.url} -O {output}.gz
