@@ -43,6 +43,8 @@ def parser():
                         help=' The file location of the positive data´s bed file')
     parser.add_argument('-neg', type=str, required=True, dest='negative',
                         help=' The file location of the positive data´s bed file')
+    parser.add_argument('-mode', type=str, required=True, dest='mode',
+                        help='Name suffix of the output files. test / train')
     parser.add_argument('-o', type=str, required=True, dest='output_path',
                         help='The output folder')
 
@@ -146,9 +148,9 @@ if __name__ == "__main__":
     dataset = get_sequences(chromosomes, dataset)
 
     # 4. get one-hot-encoding and write output
-    output = open(args.output_path + "/deepCirCode_test.tsv", "w")
-    output_x = open(args.output_path + "/deepCirCode_x_test.txt", "w")
-    output_y = open(args.output_path + "/deepCirCode_y_test.txt", "w")
+    output = open(args.output_path + "/deepCirCode_" + args.mode + ".tsv", "w")
+    output_x = open(args.output_path + "/deepCirCode_x_" + args.mode + ".txt", "w")
+    output_y = open(args.output_path + "/deepCirCode_y_" + args.mode + ".txt", "w")
     encode_and_write(dataset, output, output_x, output_y)
     output.flush()
     output_x.flush()
