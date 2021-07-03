@@ -14,6 +14,8 @@ dependencies:
   - biopython
   - pybedtools
   - ucsc-liftover
+  - ujson
+  - gtfparse
   - rsync
   - r-base
   - r-essentials
