@@ -1,8 +1,8 @@
-# Title     : Wang et al. 2019 dataset
-# Objective : Load data
-# Created by: mumichae
-# Created on: 6/6/21
-library(DeepCirCode)
+# Extract the features for SVM and RF from the data of Wang 2019 or 
+# our own training and test data set
+
+
+#library(DeepCirCode)
 library(data.table)
 library(stringr)
 
@@ -59,16 +59,22 @@ get_frequencies <- function(dataset) {
   return(output)
 }
 
-data(HumanTrain)  # datasets are lazy loaded as variable "HumanTrain" until being used
-data(HumanTest)
-data(y_train_human)
-data(y_test_human)
+#train <- data(HumanTrain)  # datasets are lazy loaded as variable "HumanTrain" until being used
+#test <- data(HumanTest)
+#data(y_train_human)
+#data(y_test_human)
 
-freq_train <- get_frequencies(HumanTrain)
-freq_test <- get_frequencies(HumanTest)
+train <- data.frame(read.table(snakemake@input$train_data, sep = "\t", header = TRUE))
+test <-  data.frame(read.table(snakemake@input$test_data, sep = "\t", header = TRUE))
+
+#train <- data.frame(read.table('//wsl$/Ubuntu-20.04/home/laura/ML4RG_project/backsplice_code/results/processed_data/features/DeepCirCode/DiLiddo2019/all_data.tsv', sep = "\t", header = TRUE))
+
+
+freq_train <- get_frequencies(train)
+freq_test <- get_frequencies(test)
 
 saveRDS(freq_train, snakemake@output$train)
 saveRDS(freq_train, snakemake@output$test)
 
 # TODO: save all necessary output
-fwrite(HumanTrain, snakemake@output$train, sep = '\t')
+#fwrite(HumanTrain, snakemake@output$train, sep = '\t')

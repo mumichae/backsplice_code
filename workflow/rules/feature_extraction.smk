@@ -83,3 +83,17 @@ rule extract_DeepCirCode_data:
 
 rule all_extract_DeepCirCode_data:
     input: expand(rules.extract_DeepCirCode_data.output,source=['DiLiddo2019', 'Wang2019'])
+
+rule SVM_RF_features:
+    """
+    run the R script extracting the features for SVM and RF from the DeepCirCode input data
+    """
+    input: 
+        test_data=config['processed_data'] + '/features/DeepCirCode/DiLiddo2019/all_data.tsv',
+        train_data=config['processed_data'] + '/features/DeepCirCode/Wang2019/all_data.tsv'
+    output:
+        test_features=config['processed_data'] + '/features/SVM_RF/test.rds',
+        train_features=config['processed_data'] + '/features/SVM_RF/train.rds',
+    script:
+        '../scripts/data/wang_2019.R'
+
