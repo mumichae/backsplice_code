@@ -43,10 +43,12 @@ def parser():
                         help=' The file location of the positive data´s bed file')
     parser.add_argument('-neg', type=str, required=True, dest='negative',
                         help=' The file location of the positive data´s bed file')
-    parser.add_argument('-mode', type=str, required=True, dest='mode',
-                        help='Name suffix of the output files. test / train')
-    parser.add_argument('-o', type=str, required=True, dest='output_path',
-                        help='The output folder')
+    parser.add_argument('-tsv', type=str, required=True, dest='out_tsv',
+                        help='The complete training data (features + labels) as TSV')
+    parser.add_argument('-x', type=str, required=True, dest='out_x',
+                        help='The x feature matrix as txt')
+    parser.add_argument('-y', type=str, required=True, dest='out_y',
+                        help='The y label matrix as txt')
 
     return parser.parse_args()
 
@@ -148,9 +150,9 @@ if __name__ == "__main__":
     dataset = get_sequences(chromosomes, dataset)
 
     # 4. get one-hot-encoding and write output
-    output = open(args.output_path + "/deepCirCode_" + args.mode + ".tsv", "w")
-    output_x = open(args.output_path + "/deepCirCode_x_" + args.mode + ".txt", "w")
-    output_y = open(args.output_path + "/deepCirCode_y_" + args.mode + ".txt", "w")
+    output = open(args.out_tsv, "w")
+    output_x = open(args.out_x, "w")
+    output_y = open(args.out_y, "w")
     encode_and_write(dataset, output, output_x, output_y)
     output.flush()
     output_x.flush()

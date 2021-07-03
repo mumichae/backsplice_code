@@ -56,8 +56,7 @@ rule canonical_gtf:
         wget -nc {params.url} -O {output.gtf}.gz
         zcat {output.gtf}.gz \
             | grep -v '#' \
-            | sed 's/^/{params.chr_prefix}/' \
-            | grep -E 'transcript_support_level "1";' > {output.gtf}
+            | sed 's/^/{params.chr_prefix}/' > {output.gtf}
         """
 
 
@@ -75,9 +74,9 @@ rule download_chainfile:
 rule get_genome_references:
     # Request fasta file for genome assembly specified in config
     input:
-        expand(rules.genomepy.output,assembly=config['assembly']),
-        expand(rules.canonical_gtf.output,assembly=config['assembly']),
-        expand(rules.get_phastCons.output,assembly=config['assembly'])
+        rules.canonical_gtf.output,
+        expand(rules.genomepy.output,assembly=assembly),
+        expand(rules.get_phastCons.output,assembly=assembly)
 
 
 def get_fasta(wildcards):
@@ -89,17 +88,18 @@ def get_fasta(wildcards):
 rule data_DiLiddo2019:
     input: 'resources/high_conf_circ.tab'
     output:
-        circRNA = config['processed_data'] + '/datasets/DiLiddo2019/circRNA.bed',
-        linear_1 = config['processed_data'] + '/datasets/DiLiddo2019/linear1.bed',
-        linear_2 = config['processed_data'] + '/datasets/DiLiddo2019/linear2.bed'
+        circRNA=config['processed_data'] + '/datasets/DiLiddo2019/circRNA.bed',
+        linear_1=config['processed_data'] + '/datasets/DiLiddo2019/linear1.bed',
+        linear_2=config['processed_data'] + '/datasets/DiLiddo2019/linear2.bed'
     run:
         import pandas as pd
-        raw_data = pd.read_table(input[0], sep='\t')
+
+        raw_data = pd.read_table(input[0],sep='\t')
         bed_dfs = {}
         strand = '.'
 
         for col in raw_data:
-            df = raw_data[col].str.split(':', expand=True)
+            df = raw_data[col].str.split(':',expand=True)
             if col == 'circRNA':
                 # strand only saved for circRNA BSJ
                 df.columns = ['chrom', 'range', 'strand']
@@ -121,7 +121,7 @@ rule data_DiLiddo2019:
                 bed_df['chromStart'] = bed_df['chromStart'].astype(int) - 1
 
             bed_df = bed_df[['chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand']]
-            bed_df.to_csv(output[name], sep='\t', header=False, index=False)
+            bed_df.to_csv(output[name],sep='\t',header=False,index=False)
 
 
 rule data_Chaabane2020:
@@ -152,11 +152,13 @@ rule data_Wang2019:
     """
     Dataset used by Wang et al. 2019 (DeepCirCode)
     Processed negative (GENCODE lncRNAs) and positive (circRNADb & circBase) datasets
+    Remove all high-confidence circRNA test data from DiLiddo2019
     """
     input:
         positive='resources/Wang2019/human_positive.tsv',
         negative='resources/Wang2019/human_negative.tsv',
-        chainfile= rules.download_chainfile.output[0]
+        test_data=rules.data_DiLiddo2019.output.circRNA,
+        chainfile=rules.download_chainfile.output[0]
     output:
         positive=config['processed_data'] + '/datasets/Wang2019/circRNA.bed',
         negative=config['processed_data'] + '/datasets/Wang2019/negative.bed'
@@ -168,7 +170,7 @@ rule data_Wang2019:
             df = pd.read_table(
                 file,
                 skiprows=1,
-                usecols=[0,1,2,3,4],
+                usecols=[0, 1, 2, 3, 4],
                 names=['chrom', 'chromStart', 'chromEnd', 'strand', 'name'],
                 sep='\t'
             )
@@ -178,6 +180,10 @@ rule data_Wang2019:
             )
             if config["assembly"] == "hg38":
                 bed = bed.liftover(input.chainfile)
+
+            if i == 0:
+                # remove DiLiddo data for positive data
+                bed = bed.subtract(input.test_data, s=True, A=True)
             bed.saveas(output[i])
 
 
@@ -205,11 +211,18 @@ rule get_linear_junctions:
     Get linear junctions subset to circular junctions
     """
     input:
+        script='workflow/scripts/data/get_linear_junctions.py',
         gtf=rules.canonical_gtf.output[0],
         circ=get_positive_data
     output:
-        junctions=config['processed_data'] + '/datasets/gene_annotation/linear_junctions-{source}.bed'
-    script: '../scripts/data/get_linear_junctions.py'
+        junctions=config['processed_data'] + '/datasets/linear_junctions/{source}.bed'
+    shell:
+        """
+        python {input.script} \
+            -gtf {input.gtf} \
+            -circ {input.circ} \
+            -o {output.junctions}
+        """
 
 
 def get_negative_data(wildcards, source=None):
@@ -220,36 +233,10 @@ def get_negative_data(wildcards, source=None):
             raise LookupError("Must define a valid source as wildcard or parameter")
     if source == "Chaabane2020":
         return rules.data_Chaabane2020.output.negative_bed
-    return expand(rules.get_linear_junctions.output.junctions, source=source)[0]
+    return expand(rules.get_linear_junctions.output.junctions,source=source)[0]
 
 
-# Create datasets for training and evaluation
-
-rule get_Wang2019_training_set:
-    """
-    Subtract the test data from DiLiddo2019 from Wang2019's positive training set
-    Create the negative trining dataset
-    Create the DeepCirCode Input for training
-    """
-    input:
-        wang_positive=config['processed_data'] + '/datasets/Wang2019/circRNA.bed',
-        diLiddo_positive=config['processed_data'] + '/datasets/DiLiddo2019/circRNA.bed',
-        gtf=config['processed_data'] + '/reference/hg38/hg38.ensembl.canonical.gtf',
-        fasta=config['processed_data'] + '/reference/hg38/hg38.fa',
-        dcc_dir=config['processed_data'] + '/DeepCirCode_input'
-    output:
-        wang_without_diLiddo=config['processed_data'] + '/datasets/Wang2019/Wang_without_DiLiddo/circRNA.bed',
-        negative_training=config['processed_data'] + '/negative_dataset/Wang_training_negative.bed',
-        dcc_input_tsv=config['processed_data'] + '/DeepCirCode_input/deepCirCode_train.tsv',
-        dcc_input_x=config['processed_data'] + '/DeepCirCode_input/deepCirCode_x_train.txt',
-        dcc_input_y=config['processed_data'] + '/DeepCirCode_input/deepCirCode_y_train.txt'
-    shell:
-        """
-        bedtools subtract -s -A -a {input.wang_positive} -b {input.diLiddo_positive} > {output.wang_without_diLiddo}
-        python workflow/scripts/data/get_linear_junctions.py -gtf {input.gtf} -circ {output.wang_without_diLiddo} -o {output.negative_training}
-        python workflow/scripts/data/get_DeepCirCode_input.py -g {input.fasta} -pos {output.wang_without_diLiddo} -neg {output.negative_training} -mode train -o {input.dcc_dir}
-        """
-
+# Split datasets for training and evaluation
 
 rule split_train_test:
     """
@@ -257,8 +244,8 @@ rule split_train_test:
     Split train and test set, add validation set annotations
     """
     input:
-        positive=get_positive_data,
-        negative=get_negative_data
+        positive_train=get_positive_data,
+        negative_train=get_negative_data
     output:
         positive=config['processed_data'] + '/datasets/train_data/positive_{source}.tsv',
         negative=config['processed_data'] + '/datasets/train_data/negative_{source}.tsv',
@@ -271,8 +258,8 @@ rule data_dev:
     Subset data purely for development
     """
     input:
-        positive=lambda wildcards: get_positive_data(wildcards, source='Chaabane2020'),
-        negative=lambda wildcards: get_negative_data(wildcards, source='Chaabane2020')
+        positive=lambda wildcards: get_positive_data(wildcards,source='Chaabane2020'),
+        negative=lambda wildcards: get_negative_data(wildcards,source='Chaabane2020')
     output:
         positive=config['processed_data'] + '/positive_dev.tsv',
         negative=config['processed_data'] + '/negative_dev.tsv'
