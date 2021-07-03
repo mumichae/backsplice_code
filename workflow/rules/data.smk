@@ -7,10 +7,10 @@ assembly = config['assembly']
 rule genomepy:
     # Download reference sequence using genomepy
     output:
-        multiext(
+        protected(multiext(
             config['processed_data'] + "/reference/{assembly}/{assembly}",
             ".fa",".fa.fai",".fa.sizes",".annotation.gtf.gz",".annotation.bed.gz"
-        )
+        ))
     params:
         provider="UCSC"  # optional, defaults to ucsc. Choose from ucsc, ensembl, and ncbi
     cache: True  # mark as eligible for between workflow caching
@@ -244,8 +244,8 @@ rule split_train_test:
     Split train and test set, add validation set annotations
     """
     input:
-        positive_train=get_positive_data,
-        negative_train=get_negative_data
+        positive=get_positive_data,
+        negative=get_negative_data
     output:
         positive=config['processed_data'] + '/datasets/train_data/positive_{source}.tsv',
         negative=config['processed_data'] + '/datasets/train_data/negative_{source}.tsv',
