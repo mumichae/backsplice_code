@@ -13,7 +13,7 @@ rule extract_data_JEDI:
         positive=expand(feature_pattern + '/human_gene.pos',method='JEDI',allow_missing=True),
         negative=expand(feature_pattern + '/human_gene.neg',method='JEDI',allow_missing=True)
     params:
-        tx=config['gene_annotations'][assembly]['transcript_id']
+        tx=config['gene_annotations'][assembly]['transcript_column']
     shell:
         """
         python {input.script} \
