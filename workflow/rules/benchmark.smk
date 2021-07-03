@@ -83,8 +83,21 @@ rule train_RF:
         train_features=config['processed_data']+'/features/SVM_RF/train.rds',
         train_labels=config['processed_data']+'/features/DeepCirCode/Wang2019/y_matrix.txt'
     output:
-        RF_model=config['processed_data']+'../trained_models/RandomForest.rds'
+        RF_model=config['processed_data']+'/../trained_models/RandomForest.rds'
     script: '../scripts/models/RandomForest.R'
+
+rule test_RF:
+    """
+    tests the Random Forest model using test data
+    """
+    input:
+        RF_model=config['processed_data']+'/../trained_models/RandomForest.rds',
+        test_features=config['processed_data']+'/features/SVM_RF/test.rds',
+        test_labels=config['processed_data']+'/features/DeepCirCode/DiLiddo2019/y_matrix.txt'
+    output:
+        prediction=config['processed_data']+'/../evaluation/RandomForest/prediction.txt',
+        plot=config['processed_data']+'/../evaluation/RandomForest/roc.png'
+    script: '../scripts/models/RandomForest_predict.R'
 
 
 rule evaluation:

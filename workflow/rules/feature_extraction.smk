@@ -84,6 +84,7 @@ rule extract_DeepCirCode_data:
 rule all_extract_DeepCirCode_data:
     input: expand(rules.extract_DeepCirCode_data.output,source=['DiLiddo2019', 'Wang2019'])
 
+
 rule SVM_RF_features:
     """
     run the R script extracting the features for SVM and RF from the DeepCirCode input data
