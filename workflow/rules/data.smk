@@ -46,18 +46,18 @@ rule get_phastCons:
 
 rule canonical_gtf:
     output:
-        config['processed_data'] + f"/reference/{config['assembly']}/{config['assembly']}.ensembl.canonical.gtf"
+        gtf=config['processed_data'] + f"/reference/{assembly}/{assembly}.ensembl.canonical.gtf"
     params:
         chroms='|'.join(canonical_chroms),
         url=config['gene_annotations'][assembly]['url'],
         chr_prefix=config['gene_annotations'][assembly]['chr_prefix']
     shell:
         """
-        wget -nc {params.url} -O {output}.gz
-        zcat {output}.gz \
+        wget -nc {params.url} -O {output.gtf}.gz
+        zcat {output.gtf}.gz \
             | grep -v '#' \
             | sed 's/^/{params.chr_prefix}/' \
-            | grep -E 'transcript_support_level "1";' > {output}
+            | grep -E 'transcript_support_level "1";' > {output.gtf}
         """
 
 
@@ -67,7 +67,7 @@ rule download_chainfile:
         url='ftp://hgdownload.cse.ucsc.edu/goldenPath/hg19/liftOver/hg19ToHg38.over.chain.gz'
     shell:
         """
-        wget --timestamping {params.url} -O {output}.gz
+        wget -nc {params.url} -O {output}.gz
         gunzip {output}.gz
         """
 
@@ -78,6 +78,10 @@ rule get_genome_references:
         expand(rules.genomepy.output,assembly=config['assembly']),
         expand(rules.canonical_gtf.output,assembly=config['assembly']),
         expand(rules.get_phastCons.output,assembly=config['assembly'])
+
+
+def get_fasta(wildcards):
+    return expand(rules.genomepy.output[0],assembly=assembly)
 
 
 # circRNA junctions (positive dataset)
@@ -254,6 +258,11 @@ rule data_dev:
 
 
 def get_test_data(wildcards, source=None):
+    if source is None:
+        try:
+            source = wildcards.source
+        except:
+            raise LookupError("Must define a valid source as wildcard or parameter")
     if config["dev"]:
         return rules.data_dev.output.positive
     if source == 'DiLiddo2019':

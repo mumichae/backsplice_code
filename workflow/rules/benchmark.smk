@@ -1,4 +1,5 @@
 include: "data.smk"
+include: "feature_extraction.smk"
 
 tmpdir = config['processed_data'] + '/tmp'
 prediction_pattern = config['evaluation'] + '/{method}/{source}_prediction.txt'
