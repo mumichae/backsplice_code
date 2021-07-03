@@ -75,6 +75,17 @@ rule predict_circDeep:
             --testing_bed {input.test}
         """
 
+rule train_RF:
+    """
+    trains the Random Forest on given data
+    """
+    input: 
+        train_features=config['processed_data']+'/features/SVM_RF/train.rds',
+        train_labels=config['processed_data']+'/features/DeepCirCode/Wang2019/y_matrix.txt'
+    output:
+        RF_model=config['processed_data']+'../trained_models/RandomForest.rds'
+    script: '../scripts/models/RandomForest.R'
+
 
 rule evaluation:
     """
