@@ -119,7 +119,7 @@ rule test_SVM:
     tests the Support Vector Machine model using test data
     """
     input:
-        SVM_model=rules.train_SVM.output.model,
+        model=rules.train_SVM.output.model,
         test_features=rules.SVM_RF_features.output.test_features,
         test_labels=rules.extract_DeepCirCode_data.output.labels
     output:
