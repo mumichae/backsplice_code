@@ -1,7 +1,7 @@
 include: "data.smk"
 
 feature_pattern = config['processed_data'] + '/features/{method}/{source}'
-pred_pattern = config['evaluation'] + '/prediction/{method}/{source}'
+pred_pattern = config['evaluation'] + '/{method}/{source}'
 
 
 rule extract_data_JEDI:
@@ -61,11 +61,15 @@ rule extract_features_JEDI:
         positive=lambda w: get_JEDI_train_test(w,rules.extract_data_JEDI.output.positive),
         negative=lambda w: get_JEDI_train_test(w,rules.extract_data_JEDI.output.negative),
     output:
-        features=expand(feature_pattern + '/data.0.K{k}.L{l}.{train_test}',method='JEDI',allow_missing=True),
+        features=expand(feature_pattern + '/data.0.K{K}.L{L}.{train_test}',method='JEDI',allow_missing=True),
     shell:
         """
-        python {input.script} {input.positive} {input.negative} {wildcards.k} {wildcards.l} {output}
+        # echo test
+        head -100 {input.positive} > /tmp/pos.trunc
+        head -100 {input.negative} > /tmp/neg.trunc
+        python {input.script} /tmp/pos.trunc /tmp/neg.trunc {wildcards.K} {wildcards.L} {output}
         """
+# python {input.script} {input.positive} {input.negative} {wildcards.K} {wildcards.L} {output}
 
 
 rule collect_features_JEDI:
@@ -73,8 +77,8 @@ rule collect_features_JEDI:
         expand(
             rules.extract_features_JEDI.output,
             method='JEDI',
-            k=config['methods']['JEDI']['kmer_len'],
-            l=config['methods']['JEDI']['flank_len'],
+            K=config['methods']['JEDI']['kmer_len'],
+            L=config['methods']['JEDI']['flank_len'],
             train_test=['train', 'test'],
             allow_missing=True
         )
