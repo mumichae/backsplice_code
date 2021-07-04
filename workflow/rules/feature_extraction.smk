@@ -1,6 +1,7 @@
 include: "data.smk"
 
 feature_pattern = config['processed_data'] + '/features/{method}/{source}'
+pred_pattern = config['evaluation'] + '/prediction/{method}/{source}'
 
 
 rule extract_data_JEDI:
@@ -10,23 +11,31 @@ rule extract_data_JEDI:
         gtf=rules.canonical_gtf.output[0],
         fasta=get_fasta
     output:
-        positive=expand(feature_pattern + '/human_gene.pos',method='JEDI',allow_missing=True),
-        negative=expand(feature_pattern + '/human_gene.neg',method='JEDI',allow_missing=True)
+        positive=expand(feature_pattern + '/human_isoform.pos',method='JEDI',allow_missing=True),
+        negative=expand(feature_pattern + '/human_isoform.neg',method='JEDI',allow_missing=True),
+        config=expand(feature_pattern + '/config.yaml',method='JEDI',allow_missing=True),
     params:
+        path_data=expand(feature_pattern,method='JEDI',allow_missing=True),
+        path_pred=expand(pred_pattern,method='JEDI',allow_missing=True),
         tx=config['gene_annotations'][assembly]['transcript_column']
-    shell:
-        """
-        python {input.script} \
-            -gtf {input.gtf} \
-            -circ {input.circ} \
-            -fasta {input.fasta} \
-            -pos {output.positive} \
-            -neg {output.negative} \
-            -tx {tx}
-        """
+    run:
+        shell('mkdir -p {params.path_data}')
+        shell('mkdir -p {params.path_pred}')
+        path_data = shell('realpath {params.path_data}',read=True)
+        path_pred = shell('realpath {params.path_pred}',read=True)
+
+        with open(output.config[0].__str__(), 'w') as fn:
+            fn.write(f'path_data: {path_data}')
+            fn.write(f'path_pred: {path_pred}')
+
+        shell(
+            'python {input.script} '
+            '-gtf {input.gtf} -circ {input.circ} -fasta {input.fasta} '
+            '-pos {output.positive} -neg {output.negative} -tx {params.tx}'
+        )
 
 
-rule all_extract_JEDI_data:
+rule all_extract_data_JEDI:
     input: expand(rules.extract_data_JEDI.output,source=['DiLiddo2019', 'Wang2019'])
 
 

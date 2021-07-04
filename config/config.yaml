@@ -2,8 +2,8 @@ data: resources
 output: results
 
 dependency_graph:
-    rulegraph: dependency_rulegraph.svg
-    dag: dependency_dag.svg
+  rulegraph: dependency_rulegraph.svg
+  dag: dependency_dag.svg
 
 # intermediate file locations
 processed_data: results/processed_data
@@ -25,7 +25,8 @@ gene_annotations:
     transcript_column: transcript_id
 
 methods:
-  - DeepCirCode
-  - circDeep
-  - SVM
-  - RandomForest
+  JEDI:
+    kmer_len:
+      - 3
+    flank_len:
+      - 4
