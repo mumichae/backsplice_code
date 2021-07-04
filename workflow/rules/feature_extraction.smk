@@ -70,13 +70,11 @@ rule extract_features_JEDI:
         features=expand(feature_pattern + '/data.0.K{K}.L{L}.{train_test}',method='JEDI',allow_missing=True),
     shell:
         """
-        # echo test
-        head -100 {input.positive} > /tmp/pos.trunc
-        head -100 {input.negative} > /tmp/neg.trunc
-        python {input.script} /tmp/pos.trunc /tmp/neg.trunc {wildcards.K} {wildcards.L} {output}
+        python {input.script} {input.positive} {input.negative} {wildcards.K} {wildcards.L} {output}
+        # head -100 {input.positive} > /tmp/pos.trunc
+        # head -100 {input.negative} > /tmp/neg.trunc
+        # python {input.script} /tmp/pos.trunc /tmp/neg.trunc {wildcards.K} {wildcards.L} {output}
         """
-
-# python {input.script} {input.positive} {input.negative} {wildcards.K} {wildcards.L} {output}
 
 
 rule collect_features_JEDI:
