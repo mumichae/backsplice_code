@@ -39,6 +39,52 @@ rule all_extract_data_JEDI:
     input: expand(rules.extract_data_JEDI.output,source=['DiLiddo2019', 'Wang2019'])
 
 
+def get_JEDI_train_test(wildcards, pattern):
+    """
+    Translate train/test to dataset (source) identifier
+    """
+    if wildcards.train_test == 'test':
+        source = 'DiLiddo2019'
+    elif wildcards.train_test == 'train':
+        source = wildcards.source
+    else:
+        raise ValueError(f'Invalid wildcard for test_train: {wildcards.train_test}')
+    return expand(pattern,source=source)
+
+
+rule extract_features_JEDI:
+    """
+    TODO: create multiple CV folds
+    """
+    input:
+        script='methods/JEDI/src/generate_input.py',
+        positive=lambda w: get_JEDI_train_test(w,rules.extract_data_JEDI.output.positive),
+        negative=lambda w: get_JEDI_train_test(w,rules.extract_data_JEDI.output.negative),
+    output:
+        features=expand(feature_pattern + '/data.0.K{k}.L{l}.{train_test}',method='JEDI',allow_missing=True),
+    shell:
+        """
+        python {input.script} {input.positive} {input.negative} {wildcards.k} {wildcards.l} {output}
+        """
+
+
+rule collect_features_JEDI:
+    input:
+        expand(
+            rules.extract_features_JEDI.output,
+            method='JEDI',
+            k=config['methods']['JEDI']['kmer_len'],
+            l=config['methods']['JEDI']['flank_len'],
+            train_test=['train', 'test'],
+            allow_missing=True
+        )
+
+
+rule all_extract_features_JEDI:
+    input:
+        expand(rules.collect_features_JEDI.input,source=['Wang2019'])
+
+
 # rule get_Wang2019_training_set:
 #     """
 #     Subtract the test data from DiLiddo2019 from Wang2019's positive training set
@@ -98,7 +144,7 @@ rule SVM_RF_features:
     """
     run the R script extracting the features for SVM and RF from the DeepCirCode input data
     """
-    input: 
+    input:
         test_data=config['processed_data'] + '/features/DeepCirCode/DiLiddo2019/all_data.tsv',
         train_data=config['processed_data'] + '/features/DeepCirCode/Wang2019/all_data.tsv'
     output:
@@ -106,4 +152,3 @@ rule SVM_RF_features:
         train_features=config['processed_data'] + '/features/SVM_RF/train.rds',
     script:
         '../scripts/data/wang_2019.R'
-
