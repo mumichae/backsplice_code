@@ -14,22 +14,22 @@ library(pROC)
 
 freq_train <- readRDS(snakemake@input$train_features)
 y_train <- data.frame(read.table(snakemake@input$train_labels, colClasses = 'character' ))
-y_train <- cbind(as.integer(substr(y_train[, 1], 1, 1)), as.integer(substr(y_train[, 1], 2, 2)))
+y_train <- cbind(as.numeric(substr(y_train[, 1], 1, 1)), as.numeric(substr(y_train[, 1], 2, 2)))
 
 model_path <- snakemake@output$model
 
 # we need to extract important sequence features! 
 # frequencies of 1/2/3-mer compositions, normalized by length of their intron/exon -> 336 k-mer compositional features!!!
 
-xy_train <- cbind(label = as.factor(y_train[,2]), data.frame(freq_train))
-
+xy_train <- cbind(label = y_train[,2], data.frame(freq_train))
+xy_train[1:5]
 
 # Fit the RF model
 set.seed(72)
 
-svm_model <- svm(label ~., data = xy_train, method = "C-classification", kernel= "radial", gamma = 0.1, cost = 10) # gamma and cost may have to be tuned
+svm_model <- svm(label ~., data = xy_train, method = "eps-regression", kernel= "radial", gamma = 0.1, cost = 10) # gamma and cost may have to be tuned
 
-summary(svm_model)
+
 
 # svm_model$SV
 
