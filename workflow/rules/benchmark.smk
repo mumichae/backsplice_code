@@ -96,8 +96,34 @@ rule test_RF:
         test_labels=config['processed_data']+'/features/DeepCirCode/DiLiddo2019/y_matrix.txt'
     output:
         prediction=config['processed_data']+'/../evaluation/RandomForest/prediction.txt',
-        plot=config['processed_data']+'/../evaluation/RandomForest/roc.png'
+        plot=config['processed_data']+'/../evaluation/RandomForest/roc.jpg'
     script: '../scripts/models/RandomForest_predict.R'
+
+
+rule train_SVM:
+    """
+    trains the Support Vector Machine on given data
+    """
+    input: 
+        train_features=config['processed_data']+'/features/SVM_RF/train.rds',
+        train_labels=config['processed_data']+'/features/DeepCirCode/Wang2019/y_matrix.txt'
+    output:
+        SVM_model=config['processed_data']+'/../trained_models/SVM.rds'
+    script: '../scripts/models/SVM.R'
+
+
+rule test_SVM:
+    """
+    tests the Support Vector Machine model using test data
+    """
+    input:
+        SVM_model=config['processed_data']+'/../trained_models/SVM.rds',
+        test_features=config['processed_data']+'/features/SVM_RF/test.rds',
+        test_labels=config['processed_data']+'/features/DeepCirCode/DiLiddo2019/y_matrix.txt'
+    output:
+        prediction=config['processed_data']+'/../evaluation/SVM/prediction.txt',
+        plot=config['processed_data']+'/../evaluation/SVM/roc.jpg'
+    script: '../scripts/models/SVM_predict.R'
 
 
 rule evaluation:
