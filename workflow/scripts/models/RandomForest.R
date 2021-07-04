@@ -11,7 +11,7 @@ y_train <- data.frame(read.table(snakemake@input$train_labels, colClasses = 'cha
 #                                 colClasses = 'character'))
 y_train <- cbind(as.integer(substr(y_train[, 1], 1, 1)), as.integer(substr(y_train[, 1], 2, 2)))
 
-model_path <- snakemake@output$RF_model
+model_path <- snakemake@output$model
 #freq_test <- readRDS(snakemake@input$test)
 #plot_path <- snakemake@output$plot
 
