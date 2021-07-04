@@ -31,7 +31,7 @@ def parser():
     return parser.parse_args()
 
 
-def extract_from_bed(transcripts, exons_bed, fasta_file, output_path):
+def extract_from_bed(transcripts, exons_df, fasta_file, output_path):
     """
     Writes one dictionary per line with
         sequence: sequence of transcript (including introns)
@@ -41,7 +41,7 @@ def extract_from_bed(transcripts, exons_bed, fasta_file, output_path):
             tail: list of splice donor sites relative to transcript
 
     :param transcripts: pybedtools.BedTool or pandas dataframe (0-based) of transcripts/circRNA BSJ
-    :param exons_df: pybedtools.BedTool of all exons in annotation
+    :param exons_df: pandas dataframe (0-based) of all exons in annotation
     :param output_path: path of file to write parsed information to
     """
     if isinstance(transcripts, BedTool):
@@ -57,9 +57,6 @@ def extract_from_bed(transcripts, exons_bed, fasta_file, output_path):
     tx_bed = tx_bed.sequence(fi=fasta_file)
     fasta_records = SeqIO.parse(tx_bed.seqfn, "fasta")
 
-    # annotate circRNA with overlapping transcript ID
-    exons_df = tx_bed.intersect(exons_bed, s=True).to_dataframe()
-
     with open(output_path, 'w') as output_file:
         for ((_, transcript), record) in zip(tx_df.iterrows(), fasta_records):
             # 2. get sequences of transcripts + strand
@@ -67,7 +64,14 @@ def extract_from_bed(transcripts, exons_bed, fasta_file, output_path):
             strand = transcript['strand'][0]
 
             # 3. get exons regions per transcript
-            exons = exons_df[exons_df['name'] == transcript['name']]
+            exons = exons_df[
+                (exons_df['chrom'] >= transcript['chrom']) &
+                (exons_df['start'] >= transcript['start']) &
+                (exons_df['end'] <= transcript['end']) &
+                (exons_df['name'] == transcript['name'])
+            ]
+            if exons.shape[0] == 0:  # skip if no exons overlap
+                continue
 
             # 4. translate exon regions into relative positions & determine head/tail
             head = []
@@ -75,6 +79,8 @@ def extract_from_bed(transcripts, exons_bed, fasta_file, output_path):
             for _, exon in exons.iterrows():
                 head.append(exon['start'] - transcript['start'])
                 tail.append(exon['end'] - transcript['start'])
+            head.sort()
+            tail.sort()
 
             # 5. write JSON entry to file
             entry = dict(
@@ -125,16 +131,18 @@ if __name__ == "__main__":
     anno_circ_df['name'] = anno_circ_df[['blockCount']]  # blockCount contains name from second BED
     circ_bed = anno_circ_df[BED_COLNAMES].drop_duplicates([x for x in BED_COLNAMES if x != 'name'])
 
+    print('Extract circRNA features')
     extract_from_bed(
         transcripts=circ_bed,
-        exons_bed=exons_bed,
+        exons_df=exons,
         fasta_file=fasta_file,
         output_path=args.out_pos
     )
 
+    print('Extract linear transcript features')
     extract_from_bed(
         transcripts=transcripts_bed,
-        exons_bed=exons_bed,
+        exons_df=exons,
         fasta_file=fasta_file,
         output_path=args.out_neg
     )
