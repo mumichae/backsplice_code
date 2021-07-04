@@ -8,20 +8,22 @@ library(stringr)
 
 # count sequence features of the 1/2/3-mers in the 4 flanking sequences
 # get all combinations 1/2/3-mers (3-mers copied from a codon table)
+
+# regex of combinations
 combinations <- c(
-  "A", "C", "G", "U",
-  "AA", "AC", "AG", "AU",
-  "CA", "CC", "CG", "CU",
-  "GA", "GC", "GG", "GU",
-  "UA", "UC", "UG", "UU",
-  "AUG", "UGG", "UAU", "UAC", "UUU", "UUC", "UGU", "UGC",
-  "AAU", "AAC", "GAU", "GAC", "CAA", "CAG", "GAA", "GAG",
-  "CAU", "CAC", "AAA", "AAG", "AUU", "AUC", "AUA", "GGU",
-  "GGC", "GGA", "GGG", "GCU", "GCC", "GCA", "GCG", "GUU",
-  "GUC", "GUA", "GUG", "ACU", "ACC", "ACA", "ACG", "CCU",
-  "CCC", "CCA", "CCG", "CUU", "CUC", "CUA", "CUG", "UUA",
-  "UUG", "UCU", "UCC", "UCA", "UCG", "AGU", "AGC", "CGU",
-  "CGC", "CGA", "CGG", "AGA", "AGG", "UAA", "UAG", "UGA"
+  "A", "C", "G", "[UT]",
+  "AA", "AC", "AG", "A[UT]",
+  "CA", "CC", "CG", "C[UT]",
+  "GA", "GC", "GG", "G[UT]",
+  "[UT]A", "[UT]C", "[UT]G", "[UT][UT]",
+  "A[UT]G", "[UT]GG", "[UT]A[UT]", "[UT]AC", "[UT][UT][UT]", "[UT][UT]C", "[UT]G[UT]", "[UT]GC",
+  "AA[UT]", "AAC", "GA[UT]", "GAC", "CAA", "CAG", "GAA", "GAG",
+  "CA[UT]", "CAC", "AAA", "AAG", "A[UT][UT]", "A[UT]C", "A[UT]A", "GG[UT]",
+  "GGC", "GGA", "GGG", "GC[UT]", "GCC", "GCA", "GCG", "G[UT][UT]",
+  "G[UT]C", "G[UT]A", "G[UT]G", "AC[UT]", "ACC", "ACA", "ACG", "CC[UT]",
+  "CCC", "CCA", "CCG", "C[UT][UT]", "C[UT]C", "C[UT]A", "C[UT]G", "[UT][UT]A",
+  "[UT][UT]G", "[UT]C[UT]", "[UT]CC", "[UT]CA", "[UT]CG", "AG[UT]", "AGC", "CG[UT]",
+  "CGC", "CGA", "CGG", "AGA", "AGG", "[UT]AA", "[UT]AG", "[UT]GA"
 )
 
 
