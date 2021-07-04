@@ -1,5 +1,6 @@
 .idea
 .snakemake
+Rplots.pdf
 *.Rproj
 .Rproj.user
 .Rhistory
