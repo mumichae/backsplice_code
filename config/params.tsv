@@ -1,5 +1,6 @@
 method	source
-#DeepCirCode	Chaabane2020
-circDeep	Chaabane2020
-#SVM	Chaabane2020
-#RandomForest	Chaabane2020
+# DeepCirCode	Chaabane2020
+# circDeep	Chaabane2020
+SVM	Wang2019
+RandomForest	Wang2019
+JEDI	Wang2019

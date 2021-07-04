@@ -1,21 +1,21 @@
-include: "data.smk"
 include: "feature_extraction.smk"
 
 tmpdir = config['processed_data'] + '/tmp'
-prediction_pattern = config['evaluation'] + '/{method}/{source}_prediction.txt'
+model_pattern = config['models'] + '/{method}/{source}'
+evaluation_pattern = config['evaluation'] + '/{method}/{source}'
 
 
 rule train_circDeep:
     input:
-        script = 'methods/circDeep/circDeep.py',
-        bigwig = expand(rules.get_phastCons.output[1], assembly=config['assembly']),
-        fasta = expand(rules.genomepy.output[0],assembly=config['assembly']),
-        gtf = expand(rules.canonical_gtf.output, assembly=config['assembly']),
-        positive = rules.data_Chaabane2020.output.positive_bed,
-        negative = rules.data_Chaabane2020.output.negative_bed,
+        script='methods/circDeep/circDeep.py',
+        bigwig=expand(rules.get_phastCons.output[1],assembly=config['assembly']),
+        fasta=expand(rules.genomepy.output[0],assembly=config['assembly']),
+        gtf=expand(rules.canonical_gtf.output,assembly=config['assembly']),
+        positive=rules.data_Chaabane2020.output.positive_bed,
+        negative=rules.data_Chaabane2020.output.negative_bed,
     output:
-        model = config['models'] + '/circDeep/{source}/bestmodel_ACNN_BLSTM_3 1 408000.hdf5',
-        intermediate_data = directory(tmpdir + '/train/circDeep/{source}')
+        model=config['models'] + '/circDeep/{source}/bestmodel_ACNN_BLSTM_3 1 408000.hdf5',
+        intermediate_data=directory(tmpdir + '/train/circDeep/{source}')
     conda:
         "../envs/circDeep.yaml"
     threads: 12
@@ -36,22 +36,22 @@ rule train_circDeep:
 
 rule predict_circDeep:
     input:
-        script = 'methods/circDeep/circDeep.py',
-        bigwig = expand(rules.get_phastCons.output[1], assembly=config['assembly']),
-        fasta = expand(rules.genomepy.output[0],assembly=config['assembly']),
-        gtf = expand(rules.canonical_gtf.output, assembly=config['assembly']),
-        seq_features = 'methods/circDeep/data/seq_features.txt',
-        rcm_features = 'methods/circDeep/data/rcm_features.txt',
-        conservation_features = 'methods/circDeep/data/conservation_features.txt',
-        class_txt = 'methods/circDeep/data/class.txt',
-        test = rules.data_dev.output.positive,
-        model = rules.train_circDeep.output.model # 'methods/circDeep/models'
+        script='methods/circDeep/circDeep.py',
+        bigwig=expand(rules.get_phastCons.output[1],assembly=config['assembly']),
+        fasta=expand(rules.genomepy.output[0],assembly=config['assembly']),
+        gtf=expand(rules.canonical_gtf.output,assembly=config['assembly']),
+        seq_features='methods/circDeep/data/seq_features.txt',
+        rcm_features='methods/circDeep/data/rcm_features.txt',
+        conservation_features='methods/circDeep/data/conservation_features.txt',
+        class_txt='methods/circDeep/data/class.txt',
+        test=rules.data_dev.output.positive,
+        model=rules.train_circDeep.output.model  # 'methods/circDeep/models'
     output:
-        seq_features = tmpdir + '/predict/circDeep/{source}/seq_features.txt',
+        seq_features=tmpdir + '/predict/circDeep/{source}/seq_features.txt',
         rcm_features=tmpdir + '/predict/circDeep/{source}/predict/rcm_features.txt',
         conservation_features=tmpdir + '/predict/circDeep/{source}/predict/conservation_features.txt',
         class_txt=tmpdir + '/predict/circDeep/{source}/predict/class.txt',
-        prediction = expand(prediction_pattern, method="circDeep", allow_missing=True)
+        prediction=expand(evaluation_pattern,method="circDeep",allow_missing=True)
     conda:
         "../envs/circDeep.yaml"
     threads: 12
@@ -75,28 +75,30 @@ rule predict_circDeep:
             --testing_bed {input.test}
         """
 
+
 rule train_RF:
     """
     trains the Random Forest on given data
     """
-    input: 
-        train_features=config['processed_data']+'/features/SVM_RF/train.rds',
-        train_labels=config['processed_data']+'/features/DeepCirCode/Wang2019/y_matrix.txt'
+    input:
+        train_features=rules.SVM_RF_features.output.train_features,
+        train_labels=rules.extract_DeepCirCode_data.output.labels
     output:
-        RF_model=config['processed_data']+'/../trained_models/RandomForest.rds'
+        model=expand(model_pattern + '/model.rds',method='RandomForest',allow_missing=True)[0]
     script: '../scripts/models/RandomForest.R'
+
 
 rule test_RF:
     """
     tests the Random Forest model using test data
     """
     input:
-        RF_model=config['processed_data']+'/../trained_models/RandomForest.rds',
-        test_features=config['processed_data']+'/features/SVM_RF/test.rds',
-        test_labels=config['processed_data']+'/features/DeepCirCode/DiLiddo2019/y_matrix.txt'
+        model=rules.train_RF.output.model,
+        test_features=rules.SVM_RF_features.output.test_features,
+        test_labels=rules.extract_DeepCirCode_data.output.labels
     output:
-        prediction=config['processed_data']+'/../evaluation/RandomForest/prediction.txt',
-        plot=config['processed_data']+'/../evaluation/RandomForest/roc.jpg'
+        prediction=expand(evaluation_pattern + '/prediction.tsv',method='RandomForest',allow_missing=True)[0],
+        plot=expand(evaluation_pattern + '/roc.jpg',method='RandomForest',allow_missing=True)[0],
     script: '../scripts/models/RandomForest_predict.R'
 
 
@@ -104,11 +106,11 @@ rule train_SVM:
     """
     trains the Support Vector Machine on given data
     """
-    input: 
-        train_features=config['processed_data']+'/features/SVM_RF/train.rds',
-        train_labels=config['processed_data']+'/features/DeepCirCode/Wang2019/y_matrix.txt'
+    input:
+        train_features=rules.SVM_RF_features.output.train_features,
+        train_labels=rules.extract_DeepCirCode_data.output.labels
     output:
-        SVM_model=config['processed_data']+'/../trained_models/SVM.rds'
+        model=expand(model_pattern + '/model.rds',method='SVM',allow_missing=True)[0]
     script: '../scripts/models/SVM.R'
 
 
@@ -117,13 +119,64 @@ rule test_SVM:
     tests the Support Vector Machine model using test data
     """
     input:
-        SVM_model=config['processed_data']+'/../trained_models/SVM.rds',
-        test_features=config['processed_data']+'/features/SVM_RF/test.rds',
-        test_labels=config['processed_data']+'/features/DeepCirCode/DiLiddo2019/y_matrix.txt'
+        model=rules.train_SVM.output.model,
+        test_features=rules.SVM_RF_features.output.test_features,
+        test_labels=rules.extract_DeepCirCode_data.output.labels
     output:
-        prediction=config['processed_data']+'/../evaluation/SVM/prediction.txt',
-        plot=config['processed_data']+'/../evaluation/SVM/roc.jpg'
+        prediction=expand(evaluation_pattern + '/prediction.tsv',method='SVM',allow_missing=True)[0],
+        plot=expand(evaluation_pattern + '/roc.jpg',method='SVM',allow_missing=True)[0],
     script: '../scripts/models/SVM_predict.R'
+
+
+rule train_JEDI:
+    """
+    Train and predict JEDI on given data
+    """
+    input:
+        script='methods/JEDI/src/run.py',
+        data=rules.collect_features_JEDI.input,
+        config=rules.extract_data_JEDI.output.config
+    output:
+        # model=expand(model_pattern + '/model.pkl',method='JEDI',allow_missing=True),
+        prediction=expand(evaluation_pattern + '/prediction.json',method='JEDI',allow_missing=True)[0]
+    params:
+        K=config['methods']['JEDI']['kmer_len'],
+        L=config['methods']['JEDI']['flank_len'],
+        epochs=config['methods']['JEDI']['epochs'],
+    conda: '../envs/JEDI.yaml'
+    resources:
+        gpu=1,
+        threads=10
+    shell:
+        """
+        pred_out=$(grep path_pred {input.config} | cut -f2 -d' ')/pred.0.K{params.K}.L{params.L}
+        # echo $pred_out
+        python {input.script} --cv=0 --K={params.K} --L={params.L} \
+            --emb_dim=128 --rnn_dim=128 --att_dim=16 --hidden_dim=128 \
+            --num_epochs={params.epochs} --learning_rate=1e-3 --l2_reg=1e-3 \
+            --config {input.config}
+        mv $pred_out {output.prediction}
+        """
+
+
+rule predict_JEDI:
+    """
+    Translate predictions from JSON to TSV
+    """
+    input:
+        prediction=rules.train_JEDI.output.prediction
+    output:
+        prediction=expand(evaluation_pattern + '/prediction.tsv',method='JEDI',allow_missing=True)[0]
+    run:
+        import ujson
+
+        with open(input.prediction,'r') as jpred:
+            preds = ujson.load(jpred)
+
+        with open(output.prediction,'w') as out:
+            out.write('label\tscore\n')
+            for score, label in preds:
+                out.write(f'{label}\t{score}\n')
 
 
 rule performance_assessment:
@@ -150,9 +203,7 @@ rule evaluation:
     Collect all predictions in this rule
     """
     input:
-        predictions=expand(
-            prediction_pattern, zip, **get_wildcards(params)
-        )
+        predictions=expand(evaluation_pattern + '/prediction.tsv',zip,**get_wildcards(params))
     output:
         metrics=config['evaluation'] + '/metrics.tsv'
     script: '../scripts/evaluation/metrics.py'
@@ -164,4 +215,3 @@ rule all_benchmark:
     """
     input:
         metrics=rules.evaluation.output
-        # processed_data=...

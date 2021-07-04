@@ -1,7 +1,26 @@
 include: "data.smk"
 
 feature_pattern = config['processed_data'] + '/features/{method}/{source}'
-pred_pattern = config['evaluation'] + '/prediction/{method}/{source}'
+pred_pattern = config['evaluation'] + '/{method}/{source}'
+
+
+def get_train_test(wildcards, pattern, train_test=None):
+    """
+    Translate train/test to dataset (source) identifier
+    wildcards must contain 'source'
+    """
+    if train_test is None:
+        try:
+            train_test = wildcards.train_test
+        except:
+            raise LookupError(f"Invalid train_test as wildcard or parameter: {train_test}")
+    if train_test == 'test':
+        source = 'DiLiddo2019'
+    elif train_test == 'train':
+        source = wildcards.source
+    else:
+        raise ValueError(f'Invalid wildcard for test_train: {wildcards.train_test}')
+    return expand(pattern,source=source,allow_missing=True)
 
 
 rule extract_data_JEDI:
@@ -24,7 +43,7 @@ rule extract_data_JEDI:
         path_data = shell('realpath {params.path_data}',read=True)
         path_pred = shell('realpath {params.path_pred}',read=True)
 
-        with open(output.config[0].__str__(), 'w') as fn:
+        with open(output.config[0].__str__(),'w') as fn:
             fn.write(f'path_data: {path_data}')
             fn.write(f'path_pred: {path_pred}')
 
@@ -39,32 +58,22 @@ rule all_extract_data_JEDI:
     input: expand(rules.extract_data_JEDI.output,source=['DiLiddo2019', 'Wang2019'])
 
 
-def get_JEDI_train_test(wildcards, pattern):
-    """
-    Translate train/test to dataset (source) identifier
-    """
-    if wildcards.train_test == 'test':
-        source = 'DiLiddo2019'
-    elif wildcards.train_test == 'train':
-        source = wildcards.source
-    else:
-        raise ValueError(f'Invalid wildcard for test_train: {wildcards.train_test}')
-    return expand(pattern,source=source)
-
-
 rule extract_features_JEDI:
     """
     TODO: create multiple CV folds
     """
     input:
         script='methods/JEDI/src/generate_input.py',
-        positive=lambda w: get_JEDI_train_test(w,rules.extract_data_JEDI.output.positive),
-        negative=lambda w: get_JEDI_train_test(w,rules.extract_data_JEDI.output.negative),
+        positive=lambda w: get_train_test(w,rules.extract_data_JEDI.output.positive),
+        negative=lambda w: get_train_test(w,rules.extract_data_JEDI.output.negative),
     output:
-        features=expand(feature_pattern + '/data.0.K{k}.L{l}.{train_test}',method='JEDI',allow_missing=True),
+        features=expand(feature_pattern + '/data.0.K{K}.L{L}.{train_test}',method='JEDI',allow_missing=True),
     shell:
         """
-        python {input.script} {input.positive} {input.negative} {wildcards.k} {wildcards.l} {output}
+        python {input.script} {input.positive} {input.negative} {wildcards.K} {wildcards.L} {output}
+        # head -100 {input.positive} > /tmp/pos.trunc
+        # head -100 {input.negative} > /tmp/neg.trunc
+        # python {input.script} /tmp/pos.trunc /tmp/neg.trunc {wildcards.K} {wildcards.L} {output}
         """
 
 
@@ -73,8 +82,8 @@ rule collect_features_JEDI:
         expand(
             rules.extract_features_JEDI.output,
             method='JEDI',
-            k=config['methods']['JEDI']['kmer_len'],
-            l=config['methods']['JEDI']['flank_len'],
+            K=config['methods']['JEDI']['kmer_len'],
+            L=config['methods']['JEDI']['flank_len'],
             train_test=['train', 'test'],
             allow_missing=True
         )
@@ -122,8 +131,8 @@ rule extract_DeepCirCode_data:
         fasta=get_fasta
     output:
         tsv=expand(feature_pattern + '/all_data.tsv',method='DeepCirCode',allow_missing=True),
-        x=expand(feature_pattern + '/x_matrix.txt',method='DeepCirCode',allow_missing=True),
-        y=expand(feature_pattern + '/y_matrix.txt',method='DeepCirCode',allow_missing=True)
+        features=expand(feature_pattern + '/x_matrix.txt',method='DeepCirCode',allow_missing=True),
+        labels=expand(feature_pattern + '/y_matrix.txt',method='DeepCirCode',allow_missing=True)
     shell:
         """
         python {input.script} \
@@ -131,8 +140,8 @@ rule extract_DeepCirCode_data:
             -pos {input.positive} \
             -neg {input.negative} \
             -tsv {output.tsv} \
-            -x {output.x} \
-            -y {output.y}
+            -x {output.features} \
+            -y {output.labels}
         """
 
 
@@ -145,10 +154,10 @@ rule SVM_RF_features:
     run the R script extracting the features for SVM and RF from the DeepCirCode input data
     """
     input:
-        test_data=config['processed_data'] + '/features/DeepCirCode/DiLiddo2019/all_data.tsv',
-        train_data=config['processed_data'] + '/features/DeepCirCode/Wang2019/all_data.tsv'
+        test_data=lambda w: get_train_test(w,rules.extract_DeepCirCode_data.output.tsv,train_test='test')[0],
+        train_data=lambda w: get_train_test(w,rules.extract_DeepCirCode_data.output.tsv,train_test='train')[0],
     output:
-        test_features=config['processed_data'] + '/features/SVM_RF/test.rds',
-        train_features=config['processed_data'] + '/features/SVM_RF/train.rds',
+        test_features=expand(feature_pattern + 'test.rds',method='SVM_RF',allow_missing=True),
+        train_features=expand(feature_pattern + 'train.rds',method='SVM_RF',allow_missing=True),
     script:
         '../scripts/data/wang_2019.R'

@@ -16,7 +16,7 @@ freq_train <- readRDS(snakemake@input$train_features)
 y_train <- data.frame(read.table(snakemake@input$train_labels, colClasses = 'character' ))
 y_train <- cbind(as.integer(substr(y_train[, 1], 1, 1)), as.integer(substr(y_train[, 1], 2, 2)))
 
-model_path <- snakemake@output$SVM_model
+model_path <- snakemake@output$model
 
 # we need to extract important sequence features! 
 # frequencies of 1/2/3-mer compositions, normalized by length of their intron/exon -> 336 k-mer compositional features!!!

@@ -11,7 +11,7 @@ y_test <- data.frame(read.table(snakemake@input$test_labels, colClasses = 'chara
 #                                 colClasses = 'character'))
 y_test <- cbind(as.integer(substr(y_test[, 1], 1, 1)), as.integer(substr(y_test[, 1], 2, 2)))
 
-rf_model <- get(load(snakemake@input$RF_model))
+rf_model <- get(load(snakemake@input$model))
 print(rf_model)
 plot_path <- snakemake@output$plot
 prediction_path <- snakemake@output$prediction
