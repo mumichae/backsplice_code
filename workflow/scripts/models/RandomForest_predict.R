@@ -36,7 +36,7 @@ auc <- round(auc(prediction_rf$label, prediction_rf$prediction), 4)
 plot <- ggroc(roc, colour = 'steelblue', size = 2) +
   geom_abline(intercept = 1) +
   ggtitle(paste0('RF ROC Curve ', '(AUC = ', auc, ')')) +
-  theme_minimal()
+  theme(plot.background = element_rect(fill = "white"))
 
 
 ggsave(plot_path, plot)
