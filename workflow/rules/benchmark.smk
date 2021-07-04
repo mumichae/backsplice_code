@@ -126,6 +126,24 @@ rule test_SVM:
     script: '../scripts/models/SVM_predict.R'
 
 
+rule performance_assessment:
+    """
+    perform performance assessment on all predictions
+    """
+    input:
+        RF_prediction=config['processed_data']+'/../evaluation/RandomForest/prediction.txt',
+        SVM_prediction=config['processed_data']+'/../evaluation/SVM/prediction.txt'
+#       DCC_prediction=config['processed_data']+'/../evaluation/DeepCirCode/prediction.txt',
+#       JEDI_prediction=config['processed_data']+'/../evaluation/JEDI/prediction.txt'
+    output:
+        barplot=config['processed_data']+'/../evaluation/performance.jpg',
+        roc=config['processed_data']+'/../evaluation/roc.jpg'
+#        prc=config['processed_data']+'/../evaluation/prc.jpg'
+    script: '../scripts/evaluation/performance_assessment.R'
+
+
+
+
 rule evaluation:
     """
     Compute evaluation metrics on all model predictions
