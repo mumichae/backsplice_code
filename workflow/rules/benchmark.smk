@@ -81,10 +81,10 @@ rule train_RF:
     trains the Random Forest on given data
     """
     input:
-        train_features=config['processed_data'] + '/features/SVM_RF/train.rds',
-        train_labels=config['processed_data'] + '/features/DeepCirCode/Wang2019/y_matrix.txt'
+        train_features=rules.SVM_RF_features.output.train_features,
+        train_labels=rules.extract_DeepCirCode_data.output.labels
     output:
-        RF_model=config['processed_data'] + '/../trained_models/RandomForest.rds'
+        model=expand(model_pattern + '/model.rds',method='RandomForest',allow_missing=True)[0]
     script: '../scripts/models/RandomForest.R'
 
 
@@ -93,12 +93,12 @@ rule test_RF:
     tests the Random Forest model using test data
     """
     input:
-        RF_model=config['processed_data'] + '/../trained_models/RandomForest.rds',
-        test_features=config['processed_data'] + '/features/SVM_RF/test.rds',
-        test_labels=config['processed_data'] + '/features/DeepCirCode/DiLiddo2019/y_matrix.txt'
+        model=rules.train_RF.output.model,
+        test_features=rules.SVM_RF_features.output.test_features,
+        test_labels=rules.extract_DeepCirCode_data.output.labels
     output:
-        prediction=expand(evaluation_pattern + '/prediction.tsv',method='RandomForest',source='Wang2019'),
-        plot=expand(evaluation_pattern + '/roc.jpg',method='RandomForest',source='Wang2019'),
+        prediction=expand(evaluation_pattern + '/prediction.tsv',method='RandomForest',allow_missing=True)[0],
+        plot=expand(evaluation_pattern + '/roc.jpg',method='RandomForest',allow_missing=True)[0],
     script: '../scripts/models/RandomForest_predict.R'
 
 
@@ -107,10 +107,10 @@ rule train_SVM:
     trains the Support Vector Machine on given data
     """
     input:
-        train_features=config['processed_data'] + '/features/SVM_RF/train.rds',
-        train_labels=config['processed_data'] + '/features/DeepCirCode/Wang2019/y_matrix.txt'
+        train_features=rules.SVM_RF_features.output.train_features,
+        train_labels=rules.extract_DeepCirCode_data.output.labels
     output:
-        SVM_model=config['processed_data'] + '/../trained_models/SVM.rds'
+        model=expand(model_pattern + '/model.rds',method='SVM',allow_missing=True)[0]
     script: '../scripts/models/SVM.R'
 
 
@@ -119,12 +119,12 @@ rule test_SVM:
     tests the Support Vector Machine model using test data
     """
     input:
-        SVM_model=config['processed_data'] + '/../trained_models/SVM.rds',
-        test_features=config['processed_data'] + '/features/SVM_RF/test.rds',
-        test_labels=config['processed_data'] + '/features/DeepCirCode/DiLiddo2019/y_matrix.txt'
+        SVM_model=rules.train_SVM.output.model,
+        test_features=rules.SVM_RF_features.output.test_features,
+        test_labels=rules.extract_DeepCirCode_data.output.labels
     output:
-        prediction=config['processed_data'] + '/../evaluation/SVM/prediction.txt',
-        plot=config['processed_data'] + '/../evaluation/SVM/roc.jpg'
+        prediction=expand(evaluation_pattern + '/prediction.tsv',method='SVM',allow_missing=True)[0],
+        plot=expand(evaluation_pattern + '/roc.jpg',method='SVM',allow_missing=True)[0],
     script: '../scripts/models/SVM_predict.R'
 
 
