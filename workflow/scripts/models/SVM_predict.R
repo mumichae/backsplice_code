@@ -12,7 +12,7 @@ y_test <- data.frame(read.table(snakemake@input$test_labels, colClasses = 'chara
 y_test <- cbind(as.integer(substr(y_test[, 1], 1, 1)), as.integer(substr(y_test[, 1], 2, 2)))
 
 svm_model <- get(load(snakemake@input$model))
-summary(svm_model)
+
 plot_path <- snakemake@output$plot
 prediction_path <- snakemake@output$prediction
 
