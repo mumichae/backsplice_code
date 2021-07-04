@@ -1,8 +1,8 @@
-include: "data.smk"
 include: "feature_extraction.smk"
 
 tmpdir = config['processed_data'] + '/tmp'
-prediction_pattern = config['evaluation'] + '/{method}/{source}_prediction.txt'
+model_pattern = config['models'] + '/{method}/{source}'
+evaluation_pattern = config['evaluation'] + '/{method}/{source}'
 
 
 rule train_circDeep:
@@ -79,24 +79,25 @@ rule train_RF:
     """
     trains the Random Forest on given data
     """
-    input: 
-        train_features=config['processed_data']+'/features/SVM_RF/train.rds',
-        train_labels=config['processed_data']+'/features/DeepCirCode/Wang2019/y_matrix.txt'
+    input:
+        train_features=config['processed_data'] + '/features/SVM_RF/train.rds',
+        train_labels=config['processed_data'] + '/features/DeepCirCode/Wang2019/y_matrix.txt'
     output:
-        RF_model=config['processed_data']+'/../trained_models/RandomForest.rds'
+        RF_model=config['processed_data'] + '/../trained_models/RandomForest.rds'
     script: '../scripts/models/RandomForest.R'
+
 
 rule test_RF:
     """
     tests the Random Forest model using test data
     """
     input:
-        RF_model=config['processed_data']+'/../trained_models/RandomForest.rds',
-        test_features=config['processed_data']+'/features/SVM_RF/test.rds',
-        test_labels=config['processed_data']+'/features/DeepCirCode/DiLiddo2019/y_matrix.txt'
+        RF_model=config['processed_data'] + '/../trained_models/RandomForest.rds',
+        test_features=config['processed_data'] + '/features/SVM_RF/test.rds',
+        test_labels=config['processed_data'] + '/features/DeepCirCode/DiLiddo2019/y_matrix.txt'
     output:
-        prediction=config['processed_data']+'/../evaluation/RandomForest/prediction.txt',
-        plot=config['processed_data']+'/../evaluation/RandomForest/roc.png'
+        prediction=expand(evaluation_pattern + '/prediction.tsv',method='RandomForest',source='Wang2019'),
+        plot=expand(evaluation_pattern + '/roc.png',method='RandomForest',source='Wang2019'),
     script: '../scripts/models/RandomForest_predict.R'
 
 
@@ -106,9 +107,7 @@ rule evaluation:
     Collect all predictions in this rule
     """
     input:
-        predictions=expand(
-            prediction_pattern, zip, **get_wildcards(params)
-        )
+        predictions=expand(evaluation_pattern + '/prediction.tsv',zip,**get_wildcards(params))
     output:
         metrics=config['evaluation'] + '/metrics.tsv'
     script: '../scripts/evaluation/metrics.py'
