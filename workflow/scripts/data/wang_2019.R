@@ -76,7 +76,7 @@ freq_train <- get_frequencies(train)
 freq_test <- get_frequencies(test)
 
 saveRDS(freq_train, snakemake@output$train)
-saveRDS(freq_train, snakemake@output$test)
+saveRDS(freq_test, snakemake@output$test)
 
 # TODO: save all necessary output
 #fwrite(HumanTrain, snakemake@output$train, sep = '\t')
