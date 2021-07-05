@@ -22,7 +22,6 @@ model_path <- snakemake@output$model
 # frequencies of 1/2/3-mer compositions, normalized by length of their intron/exon -> 336 k-mer compositional features!!!
 
 xy_train <- cbind(label = y_train[,2], data.frame(freq_train))
-xy_train[1:5]
 
 # Fit the RF model
 set.seed(72)

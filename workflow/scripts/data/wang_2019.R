@@ -34,7 +34,6 @@ get_frequencies <- function(dataset) {
 
   for (seq_part in 0:3) {
 
-    print(seq_part)
     part <- substring(dataset[, 2], seq_part * 50 + 1, seq_part * 50 + 50)
 
     for (c in combinations) {
