@@ -4,6 +4,8 @@ saveRDS(snakemake, "snakemake_eval.RDS")
 library(ggplot2)
 library(pROC)
 library(data.table)
+library(yardstick)
+library(dplyr)
 
 #read in prediction
 predictions <- lapply(snakemake@input$predictions, fread)
@@ -21,7 +23,7 @@ SVM_p <- predictions["SVM"]
 # read output paths
 barplot_path <- snakemake@output$barplot
 roc_path <- snakemake@output$roc
-#prc_path <- snakemake@output$prc
+pr_path <- snakemake@output$pr
 
 # confusion matrices
 # TODO: generalise calculations for methods and sources, using predictions
@@ -83,17 +85,39 @@ RF_auc <- round(auc(RF_p$label, RF_p$prediction), 4)
 SVM_roc <- roc(SVM_p$label, SVM_p$prediction)
 SVM_auc <- round(auc(SVM_p$label, SVM_p$prediction), 4)
 
+# legend names
+RF_name <- paste("RandomForest AUC=", as.character(RF_auc), sep="")
+SVM_name <- paste("SVM AUC=", as.character(SVM_auc), sep="")
+RF_name
+SVM_name
+
+
 #create ROC plot
-roc_plot <- ggroc(list(paste("RandomForest AUC=",RF_auc,sep="") = RF_roc, 
-                       paste("SVM AUC=",SVM_auc,sep="") = SVM_roc), size = 2) +
+roc_plot <- ggroc(list(RandomForest = RF_roc,
+                       SVM = SVM_roc),
+                  size = 1.8, alpha = 0.8) +
   geom_abline(intercept = 1) +
   ggtitle("ROC curves") +
- # scale_linetype_discrete(labels=c(paste("RandomForest AUC=",RF_auc,sep=""),
-#                                   paste("SVM AUC=",SVM_auc,sep="")))
   theme(plot.background = element_rect(fill = "white"))
 
 
 ggsave(roc_path, roc_plot)
 
-#TODO: precision-recall curves
+#precision-recall curves
+RF_p$label <- as.factor(RF_p$label)
+SVM_p$label <- as.factor(SVM_p$label)
+
+RF_pr <- pr_curve(RF_p, truth = label, pred = prediction)
+SVM_pr <- pr_curve(SVM_p, truth = label, pred = prediction)
+
+RF_pr[0:5,]
+
+pr_plot <- ggplot() +
+  geom_path(aes(x = RF_pr$recall, y = RF_pr$precision, color = "RandomForest"), size = 1.8, alpha = 0.8) +
+  geom_path(aes(x = SVM_pr$recall, y = SVM_pr$precision, color = "SVM"), size = 1.8, alpha = 0.6)+
+  coord_fixed(xlim = 0:1, ylim = 0:1)+
+  xlab("recall")+
+  ylab("precision")
+
+ggsave(pr_path, pr_plot)
 

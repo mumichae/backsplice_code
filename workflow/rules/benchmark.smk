@@ -201,8 +201,8 @@ rule performance_assessment:
 #       JEDI_prediction=config['processed_data']+'/../evaluation/JEDI/Wang2019/prediction.tsv'
     output:
         barplot=config['processed_data']+'/../evaluation/performance.jpg',
-        roc=config['processed_data']+'/../evaluation/roc.jpg'
-#        prc=config['processed_data']+'/../evaluation/prc.jpg'
+        roc=config['processed_data']+'/../evaluation/roc.jpg',
+        pr=config['processed_data']+'/../evaluation/pr.jpg'
     script: '../scripts/evaluation/performance_assessment.R'
 
 
