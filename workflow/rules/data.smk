@@ -62,8 +62,8 @@ rule canonical_gtf:
         zcat {output.gtf}.gz \
             | grep -v '#' \
             | sed 's/^/{params.chr_prefix}/' > {output.gtf}
-        grep -P '\texon\t' {output.gtf} | shuf -n 1000 > {output.exons}
-        grep -P '\ttranscript\t' {output.gtf} | shuf -n 1000 > {output.transcripts}
+        grep -P '\texon\t' {output.gtf} > {output.exons}
+        grep -P '\ttranscript\t' {output.gtf} > {output.transcripts}
         """
 
 

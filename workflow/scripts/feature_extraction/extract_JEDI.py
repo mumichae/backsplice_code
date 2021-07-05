@@ -5,6 +5,7 @@ from pybedtools import BedTool
 from pybedtools.helpers import set_tempdir
 from Bio import SeqIO
 import json
+from joblib import Parallel, delayed
 
 BED_COLNAMES = ['chrom', 'start', 'end', 'name', 'score', 'strand']
 
@@ -29,6 +30,8 @@ def parser():
                         help='Attribute key in GTF for transcript ID')
     parser.add_argument('-tmp', type=str, default='/tmp', dest='tmpdir',
                         help='Temporary directory path')
+    parser.add_argument('-threads', type=int, default=2, dest='threads',
+                        help='Number of threads for parallel processing')
 
     return parser.parse_args()
 
@@ -41,7 +44,7 @@ def parse_gtf(filename, id_key):
     return gtf[BED_COLNAMES].drop_duplicates()
 
 
-def extract_from_bed(transcripts, exons_df, fasta_file, output_path):
+def extract_from_bed(transcripts, exons_df, fasta_file, output_path, n_jobs):
     """
     Writes one dictionary per line with
         sequence: sequence of transcript (including introns)
@@ -67,46 +70,57 @@ def extract_from_bed(transcripts, exons_df, fasta_file, output_path):
     tx_bed = tx_bed.sequence(fi=fasta_file)
     fasta_records = SeqIO.parse(tx_bed.seqfn, "fasta")
 
-    skipped = 0
+    def extract_features(input_tuple):
+        # unpack input
+        tx_row, record = input_tuple
+        _, transcript = tx_row
+
+        # get exons regions per transcript
+        exons = exons_df[
+            (exons_df['chrom'] == transcript['chrom']) &
+            (exons_df['strand'] == transcript['strand']) &
+            (exons_df['start'] >= transcript['start']) &
+            (exons_df['end'] <= transcript['end']) &
+            (exons_df['name'] == transcript['name'])
+            ]
+        if exons.shape[0] == 0:
+            exons = exons.append(transcript, ignore_index=True)
+
+        # translate exon regions into relative positions & determine head/tail
+        head = []
+        tail = []
+        for _, exon in exons.iterrows():
+            head.append(exon['start'] - transcript['start'])
+            tail.append(exon['end'] - transcript['start'])
+        head.sort()
+        tail.sort()
+
+        del exons
+
+        return dict(
+            name=transcript['name'],  # optional
+            chr=transcript['chrom'],  # optional
+            start=transcript['start'],  # optional
+            end=transcript['end'],  # optional
+            strand=transcript['strand'][0],
+            junctions=dict(
+                head=head,
+                tail=tail
+            ),
+            seq=record.seq.__str__().upper(),
+        )
+
+    print(f'Parallel {n_jobs} jobs')
+    features = Parallel(n_jobs=n_jobs)(
+        delayed(extract_features)(input_tuple)
+        for input_tuple in zip(tx_df.iterrows(), fasta_records)
+    )
+    print(f'{len(features)} entries computed')
+
     with open(output_path, 'w') as output_file:
-        for ((_, transcript), record) in zip(tx_df.iterrows(), fasta_records):
-            # get exons regions per transcript
-            exons = exons_df[
-                (exons_df['chrom'] == transcript['chrom']) &
-                (exons_df['strand'] == transcript['strand']) &
-                (exons_df['start'] >= transcript['start']) &
-                (exons_df['end'] <= transcript['end']) &
-                (exons_df['name'] == transcript['name'])
-                ]
-            if exons.shape[0] == 0:
-                exons = exons.append(transcript, ignore_index=True)
-                skipped += 1
-
-            # translate exon regions into relative positions & determine head/tail
-            head = []
-            tail = []
-            for _, exon in exons.iterrows():
-                head.append(exon['start'] - transcript['start'])
-                tail.append(exon['end'] - transcript['start'])
-            head.sort()
-            tail.sort()
-
-            # write JSON entry to file
-            entry = dict(
-                name=transcript['name'],  # optional
-                chr=transcript['chrom'],  # optional
-                start=transcript['start'],  # optional
-                end=transcript['end'],  # optional
-                strand=transcript['strand'][0],
-                junctions=dict(
-                    head=head,
-                    tail=tail
-                ),
-                seq=record.seq.__str__().upper(),
-            )
-            output_file.write(json.dumps(entry))
+        for feature in features:
+            output_file.write(json.dumps(feature))
             output_file.write('\n')
-    print(f'{skipped} entries replaced with transcript boundaries only')
 
 
 if __name__ == "__main__":
@@ -140,7 +154,8 @@ if __name__ == "__main__":
         transcripts=circ_df,
         exons_df=exons,
         fasta_file=fasta_file,
-        output_path=args.out_pos
+        output_path=args.out_pos,
+        n_jobs=args.threads
     )
 
     print('Extract linear transcript features')
@@ -148,5 +163,6 @@ if __name__ == "__main__":
         transcripts=transcripts_bed,
         exons_df=exons,
         fasta_file=fasta_file,
-        output_path=args.out_neg
+        output_path=args.out_neg,
+        n_jobs=args.threads
     )
