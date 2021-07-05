@@ -26,4 +26,5 @@ dependencies:
   - r-caret
   - r-stringr
   - r-e1071
+  - r-yardstick
   - singularity
