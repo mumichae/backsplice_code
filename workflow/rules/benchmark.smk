@@ -82,7 +82,9 @@ rule train_RF:
     """
     input:
         train_features=rules.SVM_RF_features.output.train_features,
-        train_labels=rules.extract_DeepCirCode_data.output.labels
+        train_labels=lambda w: get_train_test(
+            w, rules.extract_DeepCirCode_data.output.labels, train_test="train"
+        )
     output:
         model=expand(model_pattern + '/model.rds',method='RandomForest',allow_missing=True)[0]
     script: '../scripts/models/RandomForest.R'
@@ -95,7 +97,9 @@ rule test_RF:
     input:
         model=rules.train_RF.output.model,
         test_features=rules.SVM_RF_features.output.test_features,
-        test_labels=rules.extract_DeepCirCode_data.output.labels
+        test_labels=lambda w: get_train_test(
+            w, rules.extract_DeepCirCode_data.output.labels, train_test="test"
+        )
     output:
         prediction=expand(evaluation_pattern + '/prediction.tsv',method='RandomForest',allow_missing=True)[0],
         plot=expand(evaluation_pattern + '/roc.jpg',method='RandomForest',allow_missing=True)[0],
@@ -108,7 +112,9 @@ rule train_SVM:
     """
     input:
         train_features=rules.SVM_RF_features.output.train_features,
-        train_labels=rules.extract_DeepCirCode_data.output.labels
+        train_labels=lambda w: get_train_test(
+            w, rules.extract_DeepCirCode_data.output.labels, train_test="train"
+        )
     output:
         model=expand(model_pattern + '/model.rds',method='SVM',allow_missing=True)[0]
     script: '../scripts/models/SVM.R'
@@ -121,7 +127,9 @@ rule test_SVM:
     input:
         model=rules.train_SVM.output.model,
         test_features=rules.SVM_RF_features.output.test_features,
-        test_labels=rules.extract_DeepCirCode_data.output.labels
+        test_labels=lambda w: get_train_test(
+            w, rules.extract_DeepCirCode_data.output.labels, train_test="test"
+        )
     output:
         prediction=expand(evaluation_pattern + '/prediction.tsv',method='SVM',allow_missing=True)[0],
         plot=expand(evaluation_pattern + '/roc.jpg',method='SVM',allow_missing=True)[0],
