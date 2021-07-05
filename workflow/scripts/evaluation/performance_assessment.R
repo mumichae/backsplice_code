@@ -61,14 +61,20 @@ barplot_path
 ggsave( barplot_path, plot)
 
 
-#roc curve
-roc <- roc(RF_p$label, RF_p$prediction)
-auc <- round(auc(RF_p$label, RF_p$prediction), 4)
+#roc curves
+RF_roc <- roc(RF_p$label, RF_p$prediction)
+RF_auc <- round(auc(RF_p$label, RF_p$prediction), 4)
+
+SVM_roc <- roc(SVM_p$label, SVM_p$prediction)
+SVM_auc <- round(auc(SVM_p$label, SVM_p$prediction), 4)
 
 #create ROC plot
-roc_plot <- ggroc(roc, colour = 'steelblue', size = 2) +
+roc_plot <- ggroc(list(paste("RandomForest AUC=",RF_auc,sep="") = RF_roc, 
+                       paste("SVM AUC=",SVM_auc,sep="") = SVM_roc), size = 2) +
   geom_abline(intercept = 1) +
-  ggtitle(paste0('RF ROC Curve ', '(AUC = ', auc, ')')) +
+  ggtitle("ROC curves") +
+ # scale_linetype_discrete(labels=c(paste("RandomForest AUC=",RF_auc,sep=""),
+#                                   paste("SVM AUC=",SVM_auc,sep="")))
   theme(plot.background = element_rect(fill = "white"))
 
 
