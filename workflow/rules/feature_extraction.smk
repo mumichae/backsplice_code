@@ -39,7 +39,7 @@ rule extract_data_JEDI:
         path_pred=expand(pred_pattern,method='JEDI',allow_missing=True),
         id_key=config['gene_annotations'][assembly]['transcript_column']
     resources:
-        threads=8
+        threads=20
     run:
         shell('mkdir -p {params.path_data}')
         shell('mkdir -p {params.path_pred}')
@@ -79,10 +79,10 @@ rule extract_features_JEDI:
         features=expand(feature_pattern + '/data.0.K{K}.L{L}.{train_test}',method='JEDI',allow_missing=True),
     shell:
         """
-        # python {input.script} {input.positive} {input.negative} {wildcards.K} {wildcards.L} {output}
-        head -100 {input.positive} > /tmp/pos.trunc
-        head -100 {input.negative} > /tmp/neg.trunc
-        python {input.script} /tmp/pos.trunc /tmp/neg.trunc {wildcards.K} {wildcards.L} {output}
+        python {input.script} {input.positive} {input.negative} {wildcards.K} {wildcards.L} {output}
+        # head -100 {input.positive} > /tmp/pos.trunc
+        # head -100 {input.negative} > /tmp/neg.trunc
+        # python {input.script} /tmp/pos.trunc /tmp/neg.trunc {wildcards.K} {wildcards.L} {output}
         """
 
 
