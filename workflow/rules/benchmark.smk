@@ -137,7 +137,9 @@ rule train_JEDI:
         data=rules.collect_features_JEDI.input,
         config=rules.extract_data_JEDI.output.config
     output:
-        # model=expand(model_pattern + '/model.pkl',method='JEDI',allow_missing=True),
+        # model=expand(model_pattern + '/model.tf',method='JEDI',allow_missing=True),
+        train_eval=expand(evaluation_pattern + '/train_eval.tsv',method='JEDI',allow_missing=True),
+        test_eval=expand(evaluation_pattern + '/test_eval.tsv',method='JEDI',allow_missing=True),
         prediction=expand(evaluation_pattern + '/prediction.json',method='JEDI',allow_missing=True)[0]
     params:
         K=config['methods']['JEDI']['kmer_len'],
@@ -149,13 +151,14 @@ rule train_JEDI:
         threads=10
     shell:
         """
-        pred_out=$(grep path_pred {input.config} | cut -f2 -d' ')/pred.0.K{params.K}.L{params.L}
-        # echo $pred_out
         python {input.script} --cv=0 --K={params.K} --L={params.L} \
             --emb_dim=128 --rnn_dim=128 --att_dim=16 --hidden_dim=128 \
             --num_epochs={params.epochs} --learning_rate=1e-3 --l2_reg=1e-3 \
             --config {input.config}
-        mv $pred_out {output.prediction}
+        out_path=$(grep path_pred {input.config} | cut -f2 -d' ')
+        mv $out_path/pred.0.K{params.K}.L{params.L} {output.prediction}
+        mv $out_path/train_loss.0.K{params.K}.L{params.L} {output.train_eval}
+        mv $out_path/test_loss.0.K{params.K}.L{params.L} {output.test_eval}
         """
 
 
