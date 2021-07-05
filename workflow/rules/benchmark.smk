@@ -195,10 +195,10 @@ rule performance_assessment:
     perform performance assessment on all predictions
     """
     input:
-        RF_prediction=config['processed_data']+'/../evaluation/RandomForest/prediction.txt',
-        SVM_prediction=config['processed_data']+'/../evaluation/SVM/prediction.txt'
-#       DCC_prediction=config['processed_data']+'/../evaluation/DeepCirCode/prediction.txt',
-#       JEDI_prediction=config['processed_data']+'/../evaluation/JEDI/prediction.txt'
+        RF_prediction=config['processed_data']+'/../evaluation/RandomForest/Wang2019/prediction.tsv',
+        SVM_prediction=config['processed_data']+'/../evaluation/SVM/Wang2019/prediction.tsv'
+#       DCC_prediction=config['processed_data']+'/../evaluation/DeepCirCode/Wang2019/prediction.tsv',
+#       JEDI_prediction=config['processed_data']+'/../evaluation/JEDI/Wang2019/prediction.tsv'
     output:
         barplot=config['processed_data']+'/../evaluation/performance.jpg',
         roc=config['processed_data']+'/../evaluation/roc.jpg'
