@@ -219,7 +219,8 @@ rule evaluation:
     output:
         # metrics=config['evaluation'] + '/metrics.tsv',
         barplot = config['evaluation'] + '/performance.jpg',
-        roc = config['processed_data'] + '/roc.jpg'
+        roc = config['evaluation'] + '/roc.jpg',
+        pr = config['evaluation'] + '/pr.jpg'
     script: '../scripts/evaluation/performance_assessment.R'
 
 

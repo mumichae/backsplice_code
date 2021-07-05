@@ -26,7 +26,7 @@ xy_train <- cbind(label = y_train[,2], data.frame(freq_train))
 # Fit the RF model
 set.seed(72)
 
-svm_model <- svm(label ~., data = xy_train, method = "eps-regression", kernel= "radial", gamma = 0.1, cost = 10) # gamma and cost may have to be tuned
+svm_model <- svm(as.factor(label) ~., data = xy_train, probability = TRUE, kernel= "radial") # , gamma = 0.1, cost = 10) # gamma and cost may have to be tuned
 
 
 

@@ -11,13 +11,16 @@ library(dplyr)
 predictions <- lapply(snakemake@input$predictions, fread)
 names(predictions) <- snakemake@params$methods
 
+predictions
+
 # TODO: use list of predictions
-RF_p <- predictions["RandomForest"]
-SVM_p <- predictions["SVM"]
+RF_p <- predictions[[2]] # predictions["RandomForest"]
+SVM_p <- predictions[[1]] # predictions["SVM"]
 # RF_p <- data.table(read.table(snakemake@input$RF_prediction, header=TRUE))
 # SVM_p <-  data.table(read.table(snakemake@input$SVM_prediction, header = TRUE))
 #DCC_p <- read.table(snakemake@input$DCC_prediction)
 #JEDI_p <-  read.table(snakemake@input$JEDI_prediction)
+
 
 
 # read output paths
@@ -117,7 +120,8 @@ pr_plot <- ggplot() +
   geom_path(aes(x = SVM_pr$recall, y = SVM_pr$precision, color = "SVM"), size = 1.8, alpha = 0.6)+
   coord_fixed(xlim = 0:1, ylim = 0:1)+
   xlab("recall")+
-  ylab("precision")
+  ylab("precision")+
+  ggtitle("Precision-Recall Curves")
 
 ggsave(pr_path, pr_plot)
 

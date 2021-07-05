@@ -21,8 +21,9 @@ prediction_path <- snakemake@output$prediction
 # Use model
 
 #use fitted bagged model to predict label of new observation
-prediction_svm <- predict(svm_model, data.frame(freq_test))
-prediction_svm <- data.frame(cbind(label = y_test[, 2], prediction = prediction_svm, prediction_bin = round(as.numeric(prediction_svm), 0) ) ) 
+prediction_svm <- predict(svm_model, data.frame(freq_test), probability = TRUE)
+pred <- attr(prediction_svm, "probabilities")[,1]
+prediction_svm <- data.frame(cbind(label = y_test[, 2], prediction = pred, prediction_bin = as.numeric(prediction_svm)-1 ) ) 
 
 conf_table <- table(prediction_svm$label, prediction_svm$prediction)
 conf_table
