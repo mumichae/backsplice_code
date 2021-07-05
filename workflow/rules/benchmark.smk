@@ -213,6 +213,9 @@ rule evaluation:
     """
     input:
         predictions=expand(evaluation_pattern + '/prediction.tsv',zip,**get_wildcards(params))
+    params:
+        methods=params['methods'],
+        sources=params['source']
     output:
         # metrics=config['evaluation'] + '/metrics.tsv',
         barplot = config['evaluation'] + '/performance.jpg',

@@ -9,7 +9,7 @@ library(dplyr)
 
 #read in prediction
 predictions <- lapply(snakemake@input$predictions, fread)
-names(predictions) <- snakemake@wildcards$method
+names(predictions) <- snakemake@params$methods
 
 # TODO: use list of predictions
 RF_p <- predictions["RandomForest"]
@@ -37,8 +37,8 @@ SVM_conf
 general_performance <- data.table(model = c("RandomForest", "SVM")) #, "Random", "DCC", "JEDI"))
 # TODO: add source as column
 # general_performance <- data.table(
-#   snakemake@wildcards$method,
-#   snakemake@wildcards$source
+#   snakemake@params$methods,
+#   snakemake@params$sources
 # )
 # acc = TP / (TP+FP)
 acc <- c(RF_conf[2,2] / sum(RF_conf[,2]),
