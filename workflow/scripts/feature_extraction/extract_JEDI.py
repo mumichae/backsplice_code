@@ -70,7 +70,7 @@ def extract_from_bed(transcripts, exons_df, fasta_file, output_path, n_jobs):
     tx_bed = tx_bed.sequence(fi=fasta_file)
     fasta_records = SeqIO.parse(tx_bed.seqfn, "fasta")
 
-    def extract_features(input_tuple):
+    def extract_features(input_tuple, exons_df):
         # unpack input
         tx_row, record = input_tuple
         _, transcript = tx_row
@@ -87,13 +87,8 @@ def extract_from_bed(transcripts, exons_df, fasta_file, output_path, n_jobs):
             exons = exons.append(transcript, ignore_index=True)
 
         # translate exon regions into relative positions & determine head/tail
-        head = []
-        tail = []
-        for _, exon in exons.iterrows():
-            head.append(exon['start'] - transcript['start'])
-            tail.append(exon['end'] - transcript['start'])
-        head.sort()
-        tail.sort()
+        head = exons['start'] - transcript['start']
+        tail = exons['end'] - transcript['start']
 
         del exons
 
@@ -104,15 +99,14 @@ def extract_from_bed(transcripts, exons_df, fasta_file, output_path, n_jobs):
             end=transcript['end'],  # optional
             strand=transcript['strand'][0],
             junctions=dict(
-                head=head,
-                tail=tail
+                head=head.sort_values().tolist(),
+                tail=tail.sort_values().tolist()
             ),
             seq=record.seq.__str__().upper(),
         )
 
-    print(f'Parallel {n_jobs} jobs')
     features = Parallel(n_jobs=n_jobs, verbose=1, backend="loky", max_nbytes=10)(
-        delayed(extract_features)(input_tuple)
+        delayed(extract_features)(input_tuple, exons_df)
         for input_tuple in zip(tx_df.iterrows(), fasta_records)
     )
     print(f'{len(features)} entries computed')

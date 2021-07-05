@@ -38,8 +38,7 @@ rule extract_data_JEDI:
         path_data=expand(feature_pattern,method='JEDI',allow_missing=True),
         path_pred=expand(pred_pattern,method='JEDI',allow_missing=True),
         id_key=config['gene_annotations'][assembly]['transcript_column']
-    resources:
-        threads=20
+    threads: 20
     run:
         shell('mkdir -p {params.path_data}')
         shell('mkdir -p {params.path_pred}')
@@ -59,7 +58,7 @@ rule extract_data_JEDI:
             '-pos {output.positive} '
             '-neg {output.negative} '
             '-id_key {params.id_key} '
-            '-threads {resources.threads} '
+            '-threads {threads} '
         )
 
 
