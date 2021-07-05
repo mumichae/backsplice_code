@@ -27,7 +27,8 @@ rule extract_data_JEDI:
     input:
         script='workflow/scripts/feature_extraction/extract_JEDI.py',
         circ=get_positive_data,
-        gtf=rules.canonical_gtf.output[0],
+        exons=rules.canonical_gtf.output.exons,
+        transcripts=rules.canonical_gtf.output.transcripts,
         fasta=get_fasta
     output:
         positive=expand(feature_pattern + '/human_isoform.pos',method='JEDI',allow_missing=True),
@@ -36,7 +37,9 @@ rule extract_data_JEDI:
     params:
         path_data=expand(feature_pattern,method='JEDI',allow_missing=True),
         path_pred=expand(pred_pattern,method='JEDI',allow_missing=True),
-        tx=config['gene_annotations'][assembly]['transcript_column']
+        id_key=config['gene_annotations'][assembly]['transcript_column']
+    resources:
+        threads=8
     run:
         shell('mkdir -p {params.path_data}')
         shell('mkdir -p {params.path_pred}')
@@ -49,8 +52,14 @@ rule extract_data_JEDI:
 
         shell(
             'python {input.script} '
-            '-gtf {input.gtf} -circ {input.circ} -fasta {input.fasta} '
-            '-pos {output.positive} -neg {output.negative} -tx {params.tx}'
+            '-exons {input.exons} '
+            '-transcripts {input.transcripts} '
+            '-circ {input.circ} '
+            '-fasta {input.fasta} '
+            '-pos {output.positive} '
+            '-neg {output.negative} '
+            '-id_key {params.id_key} '
+            '-threads {resources.threads} '
         )
 
 
@@ -70,10 +79,10 @@ rule extract_features_JEDI:
         features=expand(feature_pattern + '/data.0.K{K}.L{L}.{train_test}',method='JEDI',allow_missing=True),
     shell:
         """
-        python {input.script} {input.positive} {input.negative} {wildcards.K} {wildcards.L} {output}
-        # head -100 {input.positive} > /tmp/pos.trunc
-        # head -100 {input.negative} > /tmp/neg.trunc
-        # python {input.script} /tmp/pos.trunc /tmp/neg.trunc {wildcards.K} {wildcards.L} {output}
+        # python {input.script} {input.positive} {input.negative} {wildcards.K} {wildcards.L} {output}
+        head -100 {input.positive} > /tmp/pos.trunc
+        head -100 {input.negative} > /tmp/neg.trunc
+        python {input.script} /tmp/pos.trunc /tmp/neg.trunc {wildcards.K} {wildcards.L} {output}
         """
 
 

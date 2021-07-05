@@ -23,7 +23,6 @@ model_path <- snakemake@output$model
 
 xy_train <- cbind(label = y_train[,2], data.frame(freq_train))
 
-
 # Fit the RF model
 set.seed(72)
 

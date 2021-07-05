@@ -82,7 +82,9 @@ rule train_RF:
     """
     input:
         train_features=rules.SVM_RF_features.output.train_features,
-        train_labels=rules.extract_DeepCirCode_data.output.labels
+        train_labels=lambda w: get_train_test(
+            w, rules.extract_DeepCirCode_data.output.labels, train_test="train"
+        )
     output:
         model=expand(model_pattern + '/model.rds',method='RandomForest',allow_missing=True)[0]
     script: '../scripts/models/RandomForest.R'
@@ -95,7 +97,9 @@ rule test_RF:
     input:
         model=rules.train_RF.output.model,
         test_features=rules.SVM_RF_features.output.test_features,
-        test_labels=rules.extract_DeepCirCode_data.output.labels
+        test_labels=lambda w: get_train_test(
+            w, rules.extract_DeepCirCode_data.output.labels, train_test="test"
+        )
     output:
         prediction=expand(evaluation_pattern + '/prediction.tsv',method='RandomForest',allow_missing=True)[0],
         plot=expand(evaluation_pattern + '/roc.jpg',method='RandomForest',allow_missing=True)[0],
@@ -108,7 +112,9 @@ rule train_SVM:
     """
     input:
         train_features=rules.SVM_RF_features.output.train_features,
-        train_labels=rules.extract_DeepCirCode_data.output.labels
+        train_labels=lambda w: get_train_test(
+            w, rules.extract_DeepCirCode_data.output.labels, train_test="train"
+        )
     output:
         model=expand(model_pattern + '/model.rds',method='SVM',allow_missing=True)[0]
     script: '../scripts/models/SVM.R'
@@ -121,7 +127,9 @@ rule test_SVM:
     input:
         model=rules.train_SVM.output.model,
         test_features=rules.SVM_RF_features.output.test_features,
-        test_labels=rules.extract_DeepCirCode_data.output.labels
+        test_labels=lambda w: get_train_test(
+            w, rules.extract_DeepCirCode_data.output.labels, train_test="test"
+        )
     output:
         prediction=expand(evaluation_pattern + '/prediction.tsv',method='SVM',allow_missing=True)[0],
         plot=expand(evaluation_pattern + '/roc.jpg',method='SVM',allow_missing=True)[0],
@@ -137,7 +145,9 @@ rule train_JEDI:
         data=rules.collect_features_JEDI.input,
         config=rules.extract_data_JEDI.output.config
     output:
-        # model=expand(model_pattern + '/model.pkl',method='JEDI',allow_missing=True),
+        # model=expand(model_pattern + '/model.tf',method='JEDI',allow_missing=True),
+        train_eval=expand(evaluation_pattern + '/train_eval.tsv',method='JEDI',allow_missing=True),
+        test_eval=expand(evaluation_pattern + '/test_eval.tsv',method='JEDI',allow_missing=True),
         prediction=expand(evaluation_pattern + '/prediction.json',method='JEDI',allow_missing=True)[0]
     params:
         K=config['methods']['JEDI']['kmer_len'],
@@ -149,13 +159,14 @@ rule train_JEDI:
         threads=10
     shell:
         """
-        pred_out=$(grep path_pred {input.config} | cut -f2 -d' ')/pred.0.K{params.K}.L{params.L}
-        # echo $pred_out
         python {input.script} --cv=0 --K={params.K} --L={params.L} \
             --emb_dim=128 --rnn_dim=128 --att_dim=16 --hidden_dim=128 \
             --num_epochs={params.epochs} --learning_rate=1e-3 --l2_reg=1e-3 \
             --config {input.config}
-        mv $pred_out {output.prediction}
+        out_path=$(grep path_pred {input.config} | cut -f2 -d' ')
+        mv $out_path/pred.0.K{params.K}.L{params.L} {output.prediction}
+        mv $out_path/train_loss.0.K{params.K}.L{params.L} {output.train_eval}
+        mv $out_path/test_loss.0.K{params.K}.L{params.L} {output.test_eval}
         """
 
 

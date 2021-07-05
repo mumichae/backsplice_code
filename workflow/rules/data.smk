@@ -45,18 +45,25 @@ rule get_phastCons:
 
 
 rule canonical_gtf:
+    # input:
+    #     expand(rules.genomepy.output[3],assembly=config['assembly'])
     output:
-        gtf=config['processed_data'] + f"/reference/{assembly}/{assembly}.ensembl.canonical.gtf"
+        gtf=config['processed_data'] + f"/reference/{assembly}/{assembly}.canonical.gtf",
+        exons=config['processed_data'] + f"/reference/{assembly}/{assembly}.exons.gtf",
+        transcripts=config['processed_data'] + f"/reference/{assembly}/{assembly}.transcripts.gtf"
     params:
         chroms='|'.join(canonical_chroms),
         url=config['gene_annotations'][assembly]['url'],
         chr_prefix=config['gene_annotations'][assembly]['chr_prefix']
     shell:
         """
+        # zcat {input} | grep -E '{params.chroms}' > {output.gtf}
         wget -nc {params.url} -O {output.gtf}.gz
         zcat {output.gtf}.gz \
             | grep -v '#' \
             | sed 's/^/{params.chr_prefix}/' > {output.gtf}
+        grep -P '\texon\t' {output.gtf} > {output.exons}
+        grep -P '\ttranscript\t' {output.gtf} > {output.transcripts}
         """
 
 
