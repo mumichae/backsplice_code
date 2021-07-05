@@ -1,3 +1,5 @@
+saveRDS(snakemake, "snakemake_eval.RDS")
+
 # assess performance of our models
 library(ggplot2)
 library(pROC)
@@ -6,8 +8,14 @@ library(yardstick)
 library(dplyr)
 
 #read in prediction
-RF_p <- data.table(read.table(snakemake@input$RF_prediction, header=TRUE))
-SVM_p <-  data.table(read.table(snakemake@input$SVM_prediction, header = TRUE))
+predictions <- lapply(snakemake@input$predictions, fread)
+names(predictions) <- snakemake@wildcards$method
+
+# TODO: use list of predictions
+RF_p <- predictions["RandomForest"]
+SVM_p <- predictions["SVM"]
+# RF_p <- data.table(read.table(snakemake@input$RF_prediction, header=TRUE))
+# SVM_p <-  data.table(read.table(snakemake@input$SVM_prediction, header = TRUE))
 #DCC_p <- read.table(snakemake@input$DCC_prediction)
 #JEDI_p <-  read.table(snakemake@input$JEDI_prediction)
 
@@ -18,6 +26,8 @@ roc_path <- snakemake@output$roc
 pr_path <- snakemake@output$pr
 
 # confusion matrices
+# TODO: generalise calculations for methods and sources, using predictions
+# conf <- sapply(predictions, function (x) ... get TP, TN, FP, FN)
 RF_conf <- table(RF_p$label, RF_p$prediction_bin)
 RF_conf
 SVM_conf <- table(SVM_p$label, SVM_p$prediction_bin)
@@ -25,12 +35,17 @@ SVM_conf
 
 
 general_performance <- data.table(model = c("RandomForest", "SVM")) #, "Random", "DCC", "JEDI"))
+# TODO: add source as column
+# general_performance <- data.table(
+#   snakemake@wildcards$method,
+#   snakemake@wildcards$source
+# )
 # acc = TP / (TP+FP)
-acc <- c(RF_conf[2,2] / sum(RF_conf[,2]), 
+acc <- c(RF_conf[2,2] / sum(RF_conf[,2]),
          SVM_conf[2,2] / sum(SVM_conf[,2]))
 # balanced acc = 
 # sens = TP / (TP+FN)
-sens <- c(RF_conf[2,2] / sum(RF_conf[2,]), 
+sens <- c(RF_conf[2,2] / sum(RF_conf[2,]),
          SVM_conf[2,2] / sum(SVM_conf[2,]))
 # F1 = 2*Sens*Acc / (Sens+Acc)
 f1 <- (2*sens*acc)/(sens+acc)

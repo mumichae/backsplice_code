@@ -4,6 +4,7 @@ library(caret)
 #library(DeepCirCode)
 library(ggplot2)
 library(pROC)
+library(data.table)
 
 freq_test <- readRDS(snakemake@input$test_features)
 y_test <- data.frame(read.table(snakemake@input$test_labels, colClasses = 'character' ))
@@ -27,7 +28,7 @@ conf_table <- table(prediction_rf$label, prediction_rf$prediction_bin)
 
 conf_table
 
-write.table(prediction_rf, file = prediction_path)
+fwrite(prediction_rf, file = prediction_path, sep = '\t')
 
 roc <- roc(prediction_rf$label, prediction_rf$prediction)
 auc <- round(auc(prediction_rf$label, prediction_rf$prediction), 4)

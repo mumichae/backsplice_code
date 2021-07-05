@@ -206,8 +206,6 @@ rule performance_assessment:
     script: '../scripts/evaluation/performance_assessment.R'
 
 
-
-
 rule evaluation:
     """
     Compute evaluation metrics on all model predictions
@@ -216,8 +214,10 @@ rule evaluation:
     input:
         predictions=expand(evaluation_pattern + '/prediction.tsv',zip,**get_wildcards(params))
     output:
-        metrics=config['evaluation'] + '/metrics.tsv'
-    script: '../scripts/evaluation/metrics.py'
+        # metrics=config['evaluation'] + '/metrics.tsv',
+        barplot = config['evaluation'] + '/performance.jpg',
+        roc = config['processed_data'] + '/roc.jpg'
+    script: '../scripts/evaluation/performance_assessment.R'
 
 
 rule all_benchmark:

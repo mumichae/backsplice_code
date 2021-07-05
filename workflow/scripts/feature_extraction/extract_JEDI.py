@@ -111,7 +111,7 @@ def extract_from_bed(transcripts, exons_df, fasta_file, output_path, n_jobs):
         )
 
     print(f'Parallel {n_jobs} jobs')
-    features = Parallel(n_jobs=n_jobs)(
+    features = Parallel(n_jobs=n_jobs, verbose=1, backend="loky", max_nbytes=10)(
         delayed(extract_features)(input_tuple)
         for input_tuple in zip(tx_df.iterrows(), fasta_records)
     )
