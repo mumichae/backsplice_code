@@ -190,6 +190,22 @@ rule predict_JEDI:
                 out.write(f'{label}\t{score}\n')
 
 
+rule predict_DCC:
+    """
+    predict circRNAs using the existing DeepCirCode model
+    """
+    input: 
+        test_set=config['processed_data']+'/features/DeepCirCode/DiLiddo2019/all_data.tsv',
+    output:
+        #prediction=config['processed_data']+'/../evaluation/DeepCirCode/Wang2019/prediction.tsv'
+    shell:
+        """
+        conda run -n DeepCirCode Rscript workflow/scripts/models/DeepCirCode.R
+        """
+    #script:
+    #    '../scripts/models/DeepCirCode.R'
+
+
 rule performance_assessment:
     """
     perform performance assessment on all predictions

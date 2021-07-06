@@ -10,7 +10,7 @@ library(dplyr)
 #read in prediction
 predictions <- lapply(snakemake@input$predictions, fread)
 names(predictions) <- snakemake@params$methods
-
+print(snakemake@params$methods)
 predictions
 
 # TODO: use list of predictions
