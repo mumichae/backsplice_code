@@ -16,6 +16,7 @@ dependencies:
   - ujson
   - gtfparse
   - rsync
+  - joblib
   - r-base
   - r-essentials
   - r-devtools
