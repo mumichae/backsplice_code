@@ -185,9 +185,9 @@ rule predict_JEDI:
             preds = ujson.load(jpred)
 
         with open(output.prediction,'w') as out:
-            out.write('label\tscore\n')
+            out.write('label\tscore\tprediction\n')
             for score, label in preds:
-                out.write(f'{label}\t{score}\n')
+                out.write(f'{label}\t{score}\t{round(score)}\n')
 
 
 rule predict_DCC:
@@ -206,22 +206,6 @@ rule predict_DCC:
     #    '../scripts/models/DeepCirCode.R'
 
 
-rule performance_assessment:
-    """
-    perform performance assessment on all predictions
-    """
-    input:
-        RF_prediction=config['processed_data']+'/../evaluation/RandomForest/Wang2019/prediction.tsv',
-        SVM_prediction=config['processed_data']+'/../evaluation/SVM/Wang2019/prediction.tsv'
-#       DCC_prediction=config['processed_data']+'/../evaluation/DeepCirCode/Wang2019/prediction.tsv',
-#       JEDI_prediction=config['processed_data']+'/../evaluation/JEDI/Wang2019/prediction.tsv'
-    output:
-        barplot=config['processed_data']+'/../evaluation/performance.jpg',
-        roc=config['processed_data']+'/../evaluation/roc.jpg',
-        pr=config['processed_data']+'/../evaluation/pr.jpg'
-    script: '../scripts/evaluation/performance_assessment.R'
-
-
 rule evaluation:
     """
     Compute evaluation metrics on all model predictions
@@ -233,10 +217,10 @@ rule evaluation:
         methods=params_df['method'].tolist(),
         sources=params_df['source'].tolist()
     output:
-        # metrics=config['evaluation'] + '/metrics.tsv',
-        barplot = config['evaluation'] + '/performance.jpg',
-        roc = config['evaluation'] + '/roc.jpg',
-        pr = config['evaluation'] + '/pr.jpg'
+        metrics=config['evaluation'] + '/metrics.tsv',
+        barplot = config['evaluation'] + '/overall_performance.png',
+        roc = config['evaluation'] + '/ROC.png',
+        pr = config['evaluation'] + '/PRC.png'
     script: '../scripts/evaluation/performance_assessment.R'
 
 

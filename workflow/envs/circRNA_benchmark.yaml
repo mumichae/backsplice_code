@@ -27,4 +27,5 @@ dependencies:
   - r-stringr
   - r-e1071
   - r-yardstick
+  - r-mltools
 

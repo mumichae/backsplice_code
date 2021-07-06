@@ -1,7 +1,6 @@
 # Random Forest on dataset of Wang et al. (2019), by the model of Wang et al. (2017)
 library(randomForest)
 library(caret)
-#library(DeepCirCode)
 library(ggplot2)
 library(pROC)
 library(data.table)
@@ -22,16 +21,20 @@ prediction_path <- snakemake@output$prediction
 
 #use fitted bagged model to predict value of new observation
 prediction_rf <- predict(rf_model, newdata = data.frame(freq_test))
-prediction_rf <- data.frame(cbind(label = y_test[, 2], prediction = prediction_rf, prediction_bin = round(prediction_rf, digits = 0)))
+prediction_rf <- data.frame(
+  label = y_test[, 2],
+  score = prediction_rf,
+  prediction = round(prediction_rf, digits = 0)
+)
 
-conf_table <- table(prediction_rf$label, prediction_rf$prediction_bin)
+conf_table <- table(prediction_rf$label, prediction_rf$prediction)
 
 conf_table
 
 fwrite(prediction_rf, file = prediction_path, sep = '\t')
 
-roc <- roc(prediction_rf$label, prediction_rf$prediction)
-auc <- round(auc(prediction_rf$label, prediction_rf$prediction), 4)
+roc <- roc(prediction_rf$label, prediction_rf$score)
+auc <- round(auc(prediction_rf$label, prediction_rf$score), 4)
 
 #create ROC plot
 plot <- ggroc(roc, colour = 'steelblue', size = 2) +
