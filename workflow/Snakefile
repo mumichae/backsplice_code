@@ -3,7 +3,10 @@
 import pandas as pd
 from pathlib import Path
 
-params_df = pd.read_csv("config/params.tsv", sep="\t", comment='#')
+
+configfile: "config/config.yaml"
+
+params_df = pd.read_csv("config/params.tsv",sep="\t",comment='#')
 
 
 def get_wildcards(params, wildcards=None):
@@ -15,8 +18,10 @@ def get_wildcards(params, wildcards=None):
     return wildcards_dict
 
 
-singularity: "docker://continuumio/miniconda3"
-configfile: "config/config.yaml"
+tmpdir = config['processed_data'] + '/tmp'
+model_pattern = config['models'] + '/{method}/{source}'
+feature_pattern = config['processed_data'] + '/features/{method}/{source}'
+prediction_pattern = config['evaluation'] + '/predictions/{method}--{source}'
 
 include: "rules/benchmark.smk"
 

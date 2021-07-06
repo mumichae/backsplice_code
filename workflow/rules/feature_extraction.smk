@@ -1,8 +1,5 @@
 include: "data.smk"
 
-feature_pattern = config['processed_data'] + '/features/{method}/{source}'
-pred_pattern = config['evaluation'] + '/{method}/{source}'
-
 
 def get_train_test(wildcards, pattern, train_test=None):
     """
@@ -36,7 +33,7 @@ rule extract_data_JEDI:
         config=expand(feature_pattern + '/config.yaml',method='JEDI',allow_missing=True),
     params:
         path_data=expand(feature_pattern,method='JEDI',allow_missing=True),
-        path_pred=expand(pred_pattern,method='JEDI',allow_missing=True),
+        path_pred=expand(prediction_pattern,method='JEDI',allow_missing=True),
         id_key=config['gene_annotations'][assembly]['transcript_column']
     threads: 20
     run:
