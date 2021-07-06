@@ -214,8 +214,8 @@ rule evaluation:
     input:
         predictions=expand(evaluation_pattern + '/prediction.tsv',zip,**get_wildcards(params_df))
     params:
-        methods=params_df[['method']],
-        sources=params_df[['source']]
+        methods=params_df['method'].tolist(),
+        sources=params_df['source'].tolist()
     output:
         # metrics=config['evaluation'] + '/metrics.tsv',
         barplot = config['evaluation'] + '/performance.jpg',
