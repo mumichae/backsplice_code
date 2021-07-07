@@ -43,3 +43,12 @@ rule dependency:
           sed -ne '/digraph snakemake_dag/,/}}/p' | 
           dot -Tsvg -Grankdir=TB > {output.dag}
         """
+
+
+rule test_GPU:
+    conda:
+        'envs/JEDI.yaml'
+    resources:
+        gpu=1
+    script: '../test_gpu.py'
+
