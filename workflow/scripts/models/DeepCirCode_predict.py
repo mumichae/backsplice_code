@@ -1,5 +1,7 @@
-import keras
+from tensorflow.python import keras
+import keras.utils
 import pandas as pd
+import numpy as np
 
 if __name__ == "__main__":
     import sys
@@ -12,9 +14,12 @@ if __name__ == "__main__":
     x_test = convert_seqs_to_matrix(test_set['encoded_seq'])
     y_test = keras.utils.to_categorical(test_set['label'], 2)
 
-    predictions = model.predict(x_test)
-    df = pd.DataFrame(y_test[:, 1], columns=['label'])
-    df['score'] = predictions[:,0].astype(int)
-    df['prediction'] = predictions[:,1]
+    preds = model.predict(x_test)
+    pd.DataFrame.from_dict(
+        {
+            'label': y_test[:,1],
+            'score': preds[:,1],
+            'prediction': np.round(preds[:,1]).astype(int)
+        }
+    ).to_csv(snakemake.output['prediction'], sep='\t', index=False)
 
-    pd.to_csv(df, snakemake.output['prediction'], sep='\t')

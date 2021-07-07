@@ -52,7 +52,7 @@ rule dependency:
 
 rule test_GPU:
     conda:
-        'envs/JEDI.yaml'
+        'envs/DeepCirCode_py3.yaml'
     resources:
         gpu=1
     script: '../test_gpu.py'

@@ -1,0 +1,13 @@
+name: DeepCirCode
+channels:
+  - conda-forge
+dependencies:
+  - python=3.8
+  - pip
+  - cudatoolkit=11.0
+  - cudnn=8.0
+  - numpy
+  - pandas
+  - pip:
+    - tensorflow==2.4
+    - keras

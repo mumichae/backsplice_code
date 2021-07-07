@@ -6,7 +6,6 @@ dependencies:
   - python=3.9
   - pandas
   - snakemake>=6.5
-  - cudatoolkit=10.1
   - genomepy
   - ucsc-wigtobigwig
   - samtools

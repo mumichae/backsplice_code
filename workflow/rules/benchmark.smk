@@ -208,17 +208,26 @@ rule train_DeepCirCode:
         model=directory(
             expand(model_pattern,method='DeepCirCode',allow_missing=True)[0]
         )
+    conda: '../envs/DeepCirCode_py3.yaml'
+    resources:
+        gpu=1,
+        mem_mb=64000
     script: '../scripts/models/DeepCirCode.py'
 
 
 rule predict_DeepCirCode:
     input:
+        common='workflow/scripts',
         model=rules.train_DeepCirCode.output.model,
         test_data=lambda w: get_train_test(
-            w,rules.extract_DeepCirCode_data.output.features,train_test="test"
+            w,rules.extract_DeepCirCode_data.output.tsv,train_test="test"
         )
     output:
         prediction=expand(prediction_pattern + '/prediction.tsv',method='DeepCirCode',allow_missing=True)[0]
+    conda: '../envs/DeepCirCode_py3.yaml'
+    resources:
+        gpu=0,
+        mem_mb=64000
     script: '../scripts/models/DeepCirCode_predict.py'
 
 
