@@ -9,6 +9,7 @@ dependencies:
   - r-keras=2.2.4
   - r-rocr=1.0_7
   - r-reticulate=1
+  - r-data.table
   - keras=2.2.4
   - tensorflow
   - numpy

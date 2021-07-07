@@ -151,7 +151,7 @@ rule train_JEDI:
         epochs=config['methods']['JEDI']['epochs'],
     conda: '../envs/JEDI.yaml'
     resources:
-        mem_mb=300000,	
+        mem_mb=300000,
         gpu=1
     # threads: 60
     shell:
@@ -202,26 +202,24 @@ rule predict_JEDI:
 
 rule train_DeepCirCode:
     input:
-        script='../scripts/models/DeepCirCode.R',
-        train_features=rules.SVM_RF_features.output.train_features
+        train_data=rules.extract_DeepCirCode_data.output.tsv,
+        common='workflow/scripts'
     output:
-        prediction=expand(prediction_pattern + '/prediction.tsv',method='DeepCirCode',allow_missing=True)[0]
-    shell:
-        """
-        conda run -n DeepCirCode Rscript {input.script}
-        """
+        model=directory(
+            expand(model_pattern,method='DeepCirCode',allow_missing=True)[0]
+        )
+    script: '../scripts/models/DeepCirCode.py'
 
 
-rule predict_DCC:
+rule predict_DeepCirCode:
     input:
-        script='workflow/scripts/models/DeepCirCode.R',
-        test_features=rules.SVM_RF_features.output.test_features,
+        model=rules.train_DeepCirCode.output.model,
+        test_data=lambda w: get_train_test(
+            w,rules.extract_DeepCirCode_data.output.features,train_test="test"
+        )
     output:
         prediction=expand(prediction_pattern + '/prediction.tsv',method='DeepCirCode',allow_missing=True)[0]
-    shell:
-        """
-        conda run -n DeepCirCode Rscript {input.script}
-        """
+    script: '../scripts/models/DeepCirCode_predict.py'
 
 
 rule evaluation:
