@@ -1,127 +1,162 @@
-saveRDS(snakemake, "snakemake_eval.RDS")
+saveRDS(snakemake, ".snakemake/snakemake_eval.RDS")
 
 # assess performance of our models
-library(ggplot2)
-library(pROC)
-library(data.table)
-library(yardstick)
-library(dplyr)
+suppressPackageStartupMessages({
+  library(ggplot2)
+  library(data.table)
+  library(yardstick)
+  library(dplyr)
+  library(mltools)
+})
+
+# global variables
+CONF_MAT_NAMES <- c('TP', 'FP', 'FN', 'TN')
 
 #read in prediction
-predictions <- lapply(snakemake@input$predictions, fread)
-names(predictions) <- snakemake@params$methods
-
-predictions
-
-# TODO: use list of predictions
-RF_p <- predictions[[2]] # predictions["RandomForest"]
-SVM_p <- predictions[[1]] # predictions["SVM"]
-# RF_p <- data.table(read.table(snakemake@input$RF_prediction, header=TRUE))
-# SVM_p <-  data.table(read.table(snakemake@input$SVM_prediction, header = TRUE))
-#DCC_p <- read.table(snakemake@input$DCC_prediction)
-#JEDI_p <-  read.table(snakemake@input$JEDI_prediction)
-
+predictions <- mapply(
+  function(file, method_name, source_name) {
+    dt <- fread(file)
+    dt[, method := method_name]
+    dt[, source := source_name]
+    dt[, label := as.factor(label)]
+    dt[, prediction := as.factor(prediction)]
+    dt
+  },
+  snakemake@input$predictions,
+  snakemake@params$method,
+  snakemake@params$source,
+  SIMPLIFY = FALSE
+)
 
 
 # read output paths
+metrics_path <- snakemake@output$metrics
 barplot_path <- snakemake@output$barplot
 roc_path <- snakemake@output$roc
 pr_path <- snakemake@output$pr
 
 # confusion matrices
-# TODO: generalise calculations for methods and sources, using predictions
-# conf <- sapply(predictions, function (x) ... get TP, TN, FP, FN)
-RF_conf <- table(RF_p$label, RF_p$prediction_bin)
-RF_conf
-SVM_conf <- table(SVM_p$label, SVM_p$prediction_bin)
-SVM_conf
+conf <- sapply(predictions, function(x) {
+  table(x$label, x$prediction)
+})
+conf <- t(conf)
+colnames(conf) <- CONF_MAT_NAMES
+rownames(conf) <- paste(snakemake@params$method, snakemake@params$source, sep = '_')
 
-
-general_performance <- data.table(model = c("RandomForest", "SVM")) #, "Random", "DCC", "JEDI"))
-# TODO: add source as column
-# general_performance <- data.table(
-#   snakemake@params$methods,
-#   snakemake@params$sources
-# )
-# acc = TP / (TP+FP)
-acc <- c(RF_conf[2,2] / sum(RF_conf[,2]),
-         SVM_conf[2,2] / sum(SVM_conf[,2]))
-# balanced acc = 
+general_performance <- as.data.table(conf, keep.rownames = 'model')
+# acc = (TP+TN)/(TP+TN+FP+FN)
+general_performance[, Accuracy := (TP + TN) / (TP + TN + FP + FN)]
+# balanced acc = (TP/(TP+FP) + TN/(TN+FN)) / 2
+general_performance[, Balanced_Accuracy := ((TP/(TP+FP)) + (TN/(TN+FN))) / 2]
+# spec = TP / (TP+FP)
+general_performance[, Specificity := TP / (TP + FP)]
 # sens = TP / (TP+FN)
-sens <- c(RF_conf[2,2] / sum(RF_conf[2,]),
-         SVM_conf[2,2] / sum(SVM_conf[2,]))
-# F1 = 2*Sens*Acc / (Sens+Acc)
-f1 <- (2*sens*acc)/(sens+acc)
+general_performance[, Sensitivity := TP / (TP + FN)]
+# F1 = 2*Sens*Spec / (Sens+Spec)
+general_performance[, F1 := (2 * Sensitivity * Specificity) / (Sensitivity + Specificity)]
 # MCC = (TP*TN - FP*FN) / (sqrt((TP+FP) * (TP+FN) * (TN+FP) * (TN+FN)))
-# mcc = c((RF_conf[2,2]*RF_conf[1,1] - RF_conf[1,2]*RF_conf[2,1]) / (sqrt(sum(RF_conf[, 2]) * sum(RF_conf[2,]) * sum(RF_conf[1,]) * sum(RF_conf[,1]))) ,
-#        (SVM_conf[2,2]*SVM_conf[1,1] - SVM_conf[1,2]*SVM_conf[2,1]) / (sqrt(sum(SVM_conf[, 2]) * sum(SVM_conf[2,]) * sum(SVM_conf[1,]) * sum(SVM_conf[,1]))))
+general_performance[, MCC := mcc(TP = TP, FP = FP, TN = TN, FN = FN)]
 
+fwrite(general_performance, metrics_path, sep = '\t')
 
-general_performance <- cbind(general_performance, Accuracy = acc, Sensitivity = sens, 
-                             F1 = f1)
-general_performance
+# sort models by alphabet, so that the text labels are at the right position
+general_performance <- general_performance[order(general_performance$model)]
 
-general_performance <- melt(general_performance, id.vars = "model")
-general_performance
+per_melt <- melt(general_performance, id.vars = c('model', CONF_MAT_NAMES))
 
-
-# accuracy/Q2, sensitivity, MCC, F1
-# precision recall curves, roc curves
-plot <- ggplot(general_performance)+
-  geom_bar(mapping = aes(x = variable, y = value, fill = model), stat = "identity", position = position_dodge2())+
-  geom_text(aes(x = variable, y = -0.02, label = round(value, 2)),
-            position = position_dodge2(width = 0.9), size = 3.5)+
-  ggtitle("Performance Assessment")+
-  xlab("metric")+
-  ylab("performance")+
+ggplot(per_melt) +
+  geom_bar(
+    mapping = aes(x = variable, y = value, fill = model),
+    alpha = 0.8,
+    stat = "identity",
+    position = position_dodge2()
+  ) +
+  geom_text(
+    aes(x = variable, y = -0.02, label = round(value, 2)),
+    position = position_dodge2(width = 0.9),
+    size = 3.5
+  ) +
+  labs(title = "Performance Assessment", x = "metric", y = "performance") +
+  scale_fill_brewer(palette = 'Set1') +
   #scale_fill_manual(name="Model", values=c("#66FF66", "#FF6600", "#CC0000", "#CC6699", "#9999CC"))+
-  theme_bw()
+  theme_classic() +
+  theme(legend.position = 'bottom')
 
-barplot_path
-ggsave( barplot_path, plot)
-
-
-#roc curves
-RF_roc <- roc(RF_p$label, RF_p$prediction)
-RF_auc <- round(auc(RF_p$label, RF_p$prediction), 4)
-
-SVM_roc <- roc(SVM_p$label, SVM_p$prediction)
-SVM_auc <- round(auc(SVM_p$label, SVM_p$prediction), 4)
-
-# legend names
-RF_name <- paste("RandomForest AUC=", as.character(RF_auc), sep="")
-SVM_name <- paste("SVM AUC=", as.character(SVM_auc), sep="")
-RF_name
-SVM_name
+ggsave(barplot_path, width = 2500, units = "px")
 
 
-#create ROC plot
-roc_plot <- ggroc(list(RandomForest = RF_roc,
-                       SVM = SVM_roc),
-                  size = 1.8, alpha = 0.8) +
-  geom_abline(intercept = 1) +
-  ggtitle("ROC curves") +
-  theme(plot.background = element_rect(fill = "white"))
+get_curve_dt <- function(predictions, curve) {
+  if (curve == 'ROC') {
+    curve_func <- roc_curve
+    auc_func <- roc_auc
+  } else if (curve == 'PR') {
+    curve_func <- pr_curve
+    auc_func <- pr_auc
+  }
+  curve_data <- lapply(
+    predictions,
+    function(dt) {
+      dt %>%
+        curve_func(truth = label, score, event_level = 'second') %>%
+        arrange(.threshold) %>%
+        as.data.table() -> res_dt
+      auc_val <- auc_func(dt, label, score, event_level = 'second')
+      res_dt[, auc := auc_val$.estimate]
+      res_dt[, method := dt$method[1]]
+      res_dt[, source := dt$source[1]]
+      res_dt
+    }
+  )
+  rbindlist(curve_data)
+}
 
 
-ggsave(roc_path, roc_plot)
+get_auc_anno <- function(curve_dt) {
+  anno_dt <- unique(curve_dt[, .(method, source, auc)])
+  anno_dt[, label := paste(method, source, ':', round(auc, 2))]
+  anno_dt[, x := 0.75]
+  anno_dt[, y := 0.07 * .I]
+  anno_dt
+}
 
-#precision-recall curves
-RF_p$label <- as.factor(RF_p$label)
-SVM_p$label <- as.factor(SVM_p$label)
 
-RF_pr <- pr_curve(RF_p, truth = label, pred = prediction)
-SVM_pr <- pr_curve(SVM_p, truth = label, pred = prediction)
+# ROC curves
+roc_dt <- get_curve_dt(predictions, 'ROC')
+roc_anno <- get_auc_anno(roc_dt)
 
-RF_pr[0:5,]
+ggplot(roc_dt, aes(1 - specificity, sensitivity, col = method)) +
+  geom_path() +
+  geom_abline(intercept = 0, slope = 1, linetype = "dotted") +
+  coord_equal() +
+  geom_text(
+      data = roc_anno,
+        mapping = aes(x, y, col = method),
+        label = roc_anno$label,
+        inherit.aes = FALSE
+  ) +
+  labs(title = 'ROC Curves') +
+  scale_color_brewer(palette = 'Dark2') +
+  theme_classic()
 
-pr_plot <- ggplot() +
-  geom_path(aes(x = RF_pr$recall, y = RF_pr$precision, color = "RandomForest"), size = 1.8, alpha = 0.8) +
-  geom_path(aes(x = SVM_pr$recall, y = SVM_pr$precision, color = "SVM"), size = 1.8, alpha = 0.6)+
-  coord_fixed(xlim = 0:1, ylim = 0:1)+
-  xlab("recall")+
-  ylab("precision")+
-  ggtitle("Precision-Recall Curves")
+ggsave(roc_path)
 
-ggsave(pr_path, pr_plot)
+
+# Precision-Recall curves
+pr_dt <- get_curve_dt(predictions, 'PR')
+pr_anno <- get_auc_anno(pr_dt)
+
+ggplot(pr_dt, aes(recall, precision, col = method)) +
+  geom_path() +
+  coord_equal() +
+  geom_text(
+    data = pr_anno,
+    mapping = aes(x, y, col = method),
+    label = pr_anno$label,
+    inherit.aes = FALSE
+  ) +
+  labs(title = 'Precision-recall Curves') +
+  scale_color_brewer(palette = 'Dark2') +
+  theme_classic()
+
+ggsave(pr_path)
 

@@ -108,7 +108,12 @@ def get_sequences(chromosomes, dataset):
         down_e = chromosomes[junction[1]][int(junction[2]): int(junction[2])+50]
         up_e = chromosomes[junction[1]][int(junction[3])-49: int(junction[3])+1]
         down_i = chromosomes[junction[1]][int(junction[3])+1: int(junction[3]+51)]
-        sequence = up_i + down_e + up_e + down_i
+
+        # swap donor and acceptor site if backsplicing event, so that order of exons and introns is always the same:
+        if junction[0] == '1':
+            sequence = up_e + down_i + up_i + down_e
+        else:
+            sequence = up_i + down_e + up_e + down_i
 
         if junction[4] == '-':
             # reverse complement of sequence

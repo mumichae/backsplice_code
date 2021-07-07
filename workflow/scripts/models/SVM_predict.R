@@ -23,15 +23,15 @@ prediction_path <- snakemake@output$prediction
 #use fitted bagged model to predict label of new observation
 prediction_svm <- predict(svm_model, data.frame(freq_test), probability = TRUE)
 pred <- attr(prediction_svm, "probabilities")[,1]
-prediction_svm <- data.frame(cbind(label = y_test[, 2], prediction = pred, prediction_bin = as.numeric(prediction_svm)-1 ) ) 
+prediction_svm <- data.frame(cbind(label = y_test[, 2], score = pred, prediction = as.numeric(prediction_svm)-1 ) )
 
-conf_table <- table(prediction_svm$label, prediction_svm$prediction)
+conf_table <- table(prediction_svm$label, prediction_svm$score)
 conf_table
 
 fwrite(prediction_svm, file = prediction_path, sep = '\t')
 
-roc <- roc(prediction_svm$label, prediction_svm$prediction)
-auc <- round(auc(prediction_svm$label, prediction_svm$prediction),4)
+roc <- roc(prediction_svm$label, prediction_svm$score)
+auc <- round(auc(prediction_svm$label, prediction_svm$score),4)
 
 #create ROC plot
 plot <- ggroc(roc, colour = 'steelblue', size = 2) +

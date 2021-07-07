@@ -1,9 +1,5 @@
 include: "feature_extraction.smk"
 
-tmpdir = config['processed_data'] + '/tmp'
-model_pattern = config['models'] + '/{method}/{source}'
-evaluation_pattern = config['evaluation'] + '/{method}/{source}'
-
 
 rule train_circDeep:
     input:
@@ -51,7 +47,7 @@ rule predict_circDeep:
         rcm_features=tmpdir + '/predict/circDeep/{source}/predict/rcm_features.txt',
         conservation_features=tmpdir + '/predict/circDeep/{source}/predict/conservation_features.txt',
         class_txt=tmpdir + '/predict/circDeep/{source}/predict/class.txt',
-        prediction=expand(evaluation_pattern,method="circDeep",allow_missing=True)
+        prediction=expand(prediction_pattern,method="circDeep",allow_missing=True)
     conda:
         "../envs/circDeep.yaml"
     threads: 12
@@ -101,8 +97,8 @@ rule test_RF:
             w, rules.extract_DeepCirCode_data.output.labels, train_test="test"
         )
     output:
-        prediction=expand(evaluation_pattern + '/prediction.tsv',method='RandomForest',allow_missing=True)[0],
-        plot=expand(evaluation_pattern + '/roc.jpg',method='RandomForest',allow_missing=True)[0],
+        prediction=expand(prediction_pattern + '/prediction.tsv',method='RandomForest',allow_missing=True)[0],
+        plot=expand(prediction_pattern + '/roc.jpg',method='RandomForest',allow_missing=True)[0],
     script: '../scripts/models/RandomForest_predict.R'
 
 
@@ -131,8 +127,8 @@ rule test_SVM:
             w, rules.extract_DeepCirCode_data.output.labels, train_test="test"
         )
     output:
-        prediction=expand(evaluation_pattern + '/prediction.tsv',method='SVM',allow_missing=True)[0],
-        plot=expand(evaluation_pattern + '/roc.jpg',method='SVM',allow_missing=True)[0],
+        prediction=expand(prediction_pattern + '/prediction.tsv',method='SVM',allow_missing=True)[0],
+        plot=expand(prediction_pattern + '/roc.jpg',method='SVM',allow_missing=True)[0],
     script: '../scripts/models/SVM_predict.R'
 
 
@@ -146,9 +142,9 @@ rule train_JEDI:
         config=rules.extract_data_JEDI.output.config
     output:
         # model=expand(model_pattern + '/model.tf',method='JEDI',allow_missing=True),
-        train_eval=expand(evaluation_pattern + '/train_eval.tsv',method='JEDI',allow_missing=True),
-        test_eval=expand(evaluation_pattern + '/test_eval.tsv',method='JEDI',allow_missing=True),
-        prediction=expand(evaluation_pattern + '/prediction.json',method='JEDI',allow_missing=True)[0]
+        train_eval=expand(model_pattern + '/train_eval.tsv',method='JEDI',allow_missing=True),
+        test_eval=expand(model_pattern + '/test_eval.tsv',method='JEDI',allow_missing=True),
+        prediction=expand(model_pattern + '/prediction.json',method='JEDI',allow_missing=True)[0]
     params:
         K=config['methods']['JEDI']['kmer_len'],
         L=config['methods']['JEDI']['flank_len'],
@@ -178,7 +174,7 @@ rule predict_JEDI:
     input:
         prediction=rules.train_JEDI.output.prediction
     output:
-        prediction=expand(evaluation_pattern + '/prediction.tsv',method='JEDI',allow_missing=True)[0]
+        prediction=expand(prediction_pattern + '/prediction.tsv',method='JEDI',allow_missing=True)[0]
     run:
         import ujson
 
@@ -186,25 +182,25 @@ rule predict_JEDI:
             preds = ujson.load(jpred)
 
         with open(output.prediction,'w') as out:
-            out.write('label\tscore\n')
+            out.write('label\tscore\tprediction\n')
             for score, label in preds:
-                out.write(f'{label}\t{score}\n')
+                out.write(f'{label}\t{score}\t{round(score)}\n')
 
 
-rule performance_assessment:
+rule predict_DCC:
     """
-    perform performance assessment on all predictions
+    predict circRNAs using the existing DeepCirCode model
     """
-    input:
-        RF_prediction=config['processed_data']+'/../evaluation/RandomForest/Wang2019/prediction.tsv',
-        SVM_prediction=config['processed_data']+'/../evaluation/SVM/Wang2019/prediction.tsv'
-#       DCC_prediction=config['processed_data']+'/../evaluation/DeepCirCode/Wang2019/prediction.tsv',
-#       JEDI_prediction=config['processed_data']+'/../evaluation/JEDI/Wang2019/prediction.tsv'
+    input: 
+        test_set=config['processed_data']+'/features/DeepCirCode/DiLiddo2019/all_data.tsv',
     output:
-        barplot=config['processed_data']+'/../evaluation/performance.jpg',
-        roc=config['processed_data']+'/../evaluation/roc.jpg',
-        pr=config['processed_data']+'/../evaluation/pr.jpg'
-    script: '../scripts/evaluation/performance_assessment.R'
+        #prediction=config['processed_data']+'/../evaluation/DeepCirCode/Wang2019/prediction.tsv'
+    shell:
+        """
+        conda run -n DeepCirCode Rscript workflow/scripts/models/DeepCirCode.R
+        """
+    #script:
+    #    '../scripts/models/DeepCirCode.R'
 
 
 rule evaluation:
@@ -213,15 +209,15 @@ rule evaluation:
     Collect all predictions in this rule
     """
     input:
-        predictions=expand(evaluation_pattern + '/prediction.tsv',zip,**get_wildcards(params_df))
+        predictions=expand(prediction_pattern + '/prediction.tsv',zip,**get_wildcards(params_df))
     params:
-        methods=params_df[['method']],
-        sources=params_df[['source']]
+        methods=params_df['method'].tolist(),
+        sources=params_df['source'].tolist()
     output:
-        # metrics=config['evaluation'] + '/metrics.tsv',
-        barplot = config['evaluation'] + '/performance.jpg',
-        roc = config['evaluation'] + '/roc.jpg',
-        pr = config['evaluation'] + '/pr.jpg'
+        metrics=config['evaluation'] + '/metrics.tsv',
+        barplot = config['evaluation'] + '/overall_performance.png',
+        roc = config['evaluation'] + '/ROC.png',
+        pr = config['evaluation'] + '/PRC.png'
     script: '../scripts/evaluation/performance_assessment.R'
 
 
