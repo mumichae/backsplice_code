@@ -149,9 +149,9 @@ rule train_JEDI:
         K=config['methods']['JEDI']['kmer_len'],
         L=config['methods']['JEDI']['flank_len'],
         epochs=config['methods']['JEDI']['epochs'],
-    conda: '../envs/JEDI.yaml'
+    conda: '../envs/JEDI-gpu.yaml'
     resources:
-        mem_mb=300000,	
+        mem_mb=64000,
         gpu=1
     # threads: 60
     shell:

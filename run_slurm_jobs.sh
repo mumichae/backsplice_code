@@ -87,7 +87,7 @@ if [ "${AUKS_ENABLED:-false}" = true ]; then
 fi
 
 $snakemake --keep-going \
-           --default-resources ntasks=1 mem_mb=10000 gpu=1 \
+           --default-resources ntasks=1 mem_mb=10000 gpu=0 \
            --cluster "sbatch $SBATCH_ARGS --ntasks {resources.ntasks} \
                              --cpus-per-task {threads} \
                              --parsable \
