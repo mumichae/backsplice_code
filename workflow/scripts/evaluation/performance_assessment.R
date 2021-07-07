@@ -44,24 +44,30 @@ colnames(conf) <- CONF_MAT_NAMES
 rownames(conf) <- paste(snakemake@params$method, snakemake@params$source, sep = '_')
 
 general_performance <- as.data.table(conf, keep.rownames = 'model')
-# acc = TP / (TP+FP)
-general_performance[, acc := TP / (TP + FP)]
-# balanced acc =
+# acc = (TP+TN)/(TP+TN+FP+FN)
+general_performance[, Accuracy := (TP + TN) / (TP + TN + FP + FN)]
+# balanced acc = (TP/(TP+FP) + TN/(TN+FN)) / 2
+general_performance[, Balanced_Accuracy := ((TP/(TP+FP)) + (TN/(TN+FN))) / 2]
+# spec = TP / (TP+FP)
+general_performance[, Specificity := TP / (TP + FP)]
 # sens = TP / (TP+FN)
-general_performance[, sens := TP / (TP + FN)]
-# F1 = 2*Sens*Acc / (Sens+Acc)
-general_performance[, f1 := (2 * sens * acc) / (sens + acc)]
+general_performance[, Sensitivity := TP / (TP + FN)]
+# F1 = 2*Sens*Spec / (Sens+Spec)
+general_performance[, F1 := (2 * Sensitivity * Specificity) / (Sensitivity + Specificity)]
 # MCC = (TP*TN - FP*FN) / (sqrt((TP+FP) * (TP+FN) * (TN+FP) * (TN+FN)))
-general_performance[, mcc := mcc(TP = TP, FP = FP, TN = TN, FN = FN)]
+general_performance[, MCC := mcc(TP = TP, FP = FP, TN = TN, FN = FN)]
 
 fwrite(general_performance, metrics_path, sep = '\t')
 
+# sort models by alphabet, so that the text labels are at the right position
+general_performance <- general_performance[order(general_performance$model)]
 
 per_melt <- melt(general_performance, id.vars = c('model', CONF_MAT_NAMES))
 
 ggplot(per_melt) +
   geom_bar(
     mapping = aes(x = variable, y = value, fill = model),
+    alpha = 0.8,
     stat = "identity",
     position = position_dodge2()
   ) +
@@ -76,7 +82,7 @@ ggplot(per_melt) +
   theme_classic() +
   theme(legend.position = 'bottom')
 
-ggsave(barplot_path)
+ggsave(barplot_path, width = 2500, units = "px")
 
 
 get_curve_dt <- function(predictions, curve) {
