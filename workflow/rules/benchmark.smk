@@ -151,8 +151,9 @@ rule train_JEDI:
         epochs=config['methods']['JEDI']['epochs'],
     conda: '../envs/JEDI.yaml'
     resources:
-        gpu=1,
-        threads=10
+        mem_mb=300000,	
+        gpu=1
+    # threads: 60
     shell:
         """
         python {input.script} --cv=0 --K={params.K} --L={params.L} \
