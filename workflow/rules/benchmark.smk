@@ -166,11 +166,24 @@ rule train_JEDI:
         """
 
 
+rule diagnostic_JEDI:
+    """
+    Diagnostic plots for JEDI results
+    """
+    input:
+        train_eval=rules.train_JEDI.output.train_eval,
+        test_eval=rules.train_JEDI.output.train_eval,
+    output:
+        plot=expand(prediction_pattern + '/train_epochs.png',method='JEDI',allow_missing=True)[0]
+    script: '../scripts/evaluation/train_loss_plot.R'
+
+
 rule predict_JEDI:
     """
     Translate predictions from JSON to TSV
     """
     input:
+        diagnostic=rules.diagnostic_JEDI.output,
         prediction=rules.train_JEDI.output.prediction
     output:
         prediction=expand(prediction_pattern + '/prediction.tsv',method='JEDI',allow_missing=True)[0]
