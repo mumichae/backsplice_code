@@ -147,12 +147,19 @@ rule data_Chaabane2020:
         test_bed=config['processed_data'] + '/datasets/Chaabane2020/test.bed'
     params:
         chroms='|'.join(canonical_chroms)
-    shell:
-        """
-        grep -E '({params.chroms})\t' {input.positive_bed} > {output.positive_bed}
-        grep -E '({params.chroms})\t' {input.negative_bed} > {output.negative_bed}
-        grep -E '({params.chroms})\t' {input.test_bed} > {output.test_bed}
-        """
+    run:
+        shell(
+            """
+            grep -E '({params.chroms})\t' {input.positive_bed} > {output.positive_bed}
+            grep -E '({params.chroms})\t' {input.negative_bed} > {output.negative_bed}
+            grep -E '({params.chroms})\t' {input.test_bed} > {output.test_bed}
+            """
+        )
+        import pandas as pd
+        for bedfile in output:
+            bed_df = pd.read_table(bedfile, sep='\t', header=None)
+            bed_df['score'] = '.'
+            bed_df[[0,1,2,4,'score', 3]].to_csv(bedfile, sep='\t', index=False, header=False)
 
 
 rule data_Wang2019:
