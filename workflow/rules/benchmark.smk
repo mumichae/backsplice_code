@@ -79,7 +79,7 @@ rule train_RF:
     input:
         train_features=rules.SVM_RF_features.output.train_features,
         train_labels=lambda w: get_train_test(
-            w, rules.extract_DeepCirCode_data.output.labels, train_test="train"
+            w,rules.extract_DeepCirCode_data.output.labels,train_test="train"
         )
     output:
         model=expand(model_pattern + '/model.rds',method='RandomForest',allow_missing=True)[0]
@@ -94,7 +94,7 @@ rule test_RF:
         model=rules.train_RF.output.model,
         test_features=rules.SVM_RF_features.output.test_features,
         test_labels=lambda w: get_train_test(
-            w, rules.extract_DeepCirCode_data.output.labels, train_test="test"
+            w,rules.extract_DeepCirCode_data.output.labels,train_test="test"
         )
     output:
         prediction=expand(prediction_pattern + '/prediction.tsv',method='RandomForest',allow_missing=True)[0],
@@ -109,7 +109,7 @@ rule train_SVM:
     input:
         train_features=rules.SVM_RF_features.output.train_features,
         train_labels=lambda w: get_train_test(
-            w, rules.extract_DeepCirCode_data.output.labels, train_test="train"
+            w,rules.extract_DeepCirCode_data.output.labels,train_test="train"
         )
     output:
         model=expand(model_pattern + '/model.rds',method='SVM',allow_missing=True)[0]
@@ -124,7 +124,7 @@ rule test_SVM:
         model=rules.train_SVM.output.model,
         test_features=rules.SVM_RF_features.output.test_features,
         test_labels=lambda w: get_train_test(
-            w, rules.extract_DeepCirCode_data.output.labels, train_test="test"
+            w,rules.extract_DeepCirCode_data.output.labels,train_test="test"
         )
     output:
         prediction=expand(prediction_pattern + '/prediction.tsv',method='SVM',allow_missing=True)[0],
@@ -199,20 +199,28 @@ rule predict_JEDI:
                 out.write(f'{label}\t{score}\t{round(score)}\n')
 
 
-rule predict_DCC:
-    """
-    predict circRNAs using the existing DeepCirCode model
-    """
-    input: 
-        test_set=config['processed_data']+'/features/DeepCirCode/DiLiddo2019/all_data.tsv',
+rule train_DeepCirCode:
+    input:
+        script='../scripts/models/DeepCirCode.R',
+        train_features=rules.SVM_RF_features.output.train_features
     output:
-        #prediction=config['processed_data']+'/../evaluation/DeepCirCode/Wang2019/prediction.tsv'
+        prediction=expand(prediction_pattern + '/prediction.tsv',method='DeepCirCode',allow_missing=True)[0]
     shell:
         """
-        conda run -n DeepCirCode Rscript workflow/scripts/models/DeepCirCode.R
+        conda run -n DeepCirCode Rscript {input.script}
         """
-    #script:
-    #    '../scripts/models/DeepCirCode.R'
+
+
+rule predict_DCC:
+    input:
+        script='workflow/scripts/models/DeepCirCode.R',
+        test_features=rules.SVM_RF_features.output.test_features,
+    output:
+        prediction=expand(prediction_pattern + '/prediction.tsv',method='DeepCirCode',allow_missing=True)[0]
+    shell:
+        """
+        conda run -n DeepCirCode Rscript {input.script}
+        """
 
 
 rule evaluation:
@@ -227,9 +235,9 @@ rule evaluation:
         sources=params_df['source'].tolist()
     output:
         metrics=config['evaluation'] + '/metrics.tsv',
-        barplot = config['evaluation'] + '/overall_performance.png',
-        roc = config['evaluation'] + '/ROC.png',
-        pr = config['evaluation'] + '/PRC.png'
+        barplot=config['evaluation'] + '/overall_performance.png',
+        roc=config['evaluation'] + '/ROC.png',
+        pr=config['evaluation'] + '/PRC.png'
     script: '../scripts/evaluation/performance_assessment.R'
 
 
