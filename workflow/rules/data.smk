@@ -140,7 +140,7 @@ rule data_Chaabane2020:
     input:
         positive_bed='methods/circDeep/data/circRNA_dataset.bed',
         negative_bed='methods/circDeep/data/negative_dataset.bed',
-        test_bed='methods/circDeep/data/negative_dataset.bed'
+        test_bed='methods/circDeep/data/test.bed'
     output:
         positive_bed=config['processed_data'] + '/datasets/Chaabane2020/circRNA.bed',
         negative_bed=config['processed_data'] + '/datasets/Chaabane2020/negative.bed',
