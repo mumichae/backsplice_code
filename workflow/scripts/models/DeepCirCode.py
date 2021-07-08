@@ -7,6 +7,7 @@ from keras.models import Sequential
 from keras.layers import Conv1D, MaxPooling1D
 from keras.layers import Dense, Dropout, Flatten
 from keras import losses
+import numpy as np
 
 if __name__ == "__main__":
     import sys
@@ -18,6 +19,8 @@ if __name__ == "__main__":
     train_set = train_set[1:10]
     x_train = convert_seqs_to_matrix(train_set['encoded_seq'])
     y_train = keras.utils.to_categorical(train_set['label'], 2)
+
+    np.random.seed(123)
 
     model = Sequential()
 
