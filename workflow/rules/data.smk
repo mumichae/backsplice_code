@@ -201,6 +201,25 @@ rule data_Wang2019:
             bed.saveas(output[i])
 
 
+rule data_NoChr:
+    """
+    Dataset used by Wang et al. 2019 (DeepCirCode)
+    Processed negative (GENCODE lncRNAs) and positive (circRNADb & circBase) datasets
+    Remove all high-confidence circRNA test data from DiLiddo2019
+    """
+    input:
+        Wang=rules.data_Wang2019.output.positive,
+        DiLiddo=rules.data_DiLiddo2019.output.circRNA
+    output:
+        train=config['processed_data'] + '/datasets/NoChr/train.bed',
+        test=config['processed_data'] + '/datasets/NoChr/test.bed'
+    shell:
+        """
+        cat {input.Wang} {input.DiLiddo} | grep -v -P 'chr9\t' > {output.train}
+        cat {input.Wang} {input.DiLiddo} | grep -P 'chr9\t' > {output.test} 
+        """
+
+
 def get_positive_data(wildcards, source=None):
     if source is None:
         try:
@@ -214,6 +233,10 @@ def get_positive_data(wildcards, source=None):
         return rules.data_DiLiddo2019.output.circRNA
     elif source == 'Wang2019':
         return rules.data_Wang2019.output.positive
+    elif source == 'NoChr':
+        return rules.data_NoChr.output.train
+    elif source == 'NoChr_test':
+        return rules.data_NoChr.output.test
     else:
         raise LookupError(f'"{source}" not a valid data source')
 

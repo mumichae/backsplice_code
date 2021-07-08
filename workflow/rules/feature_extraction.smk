@@ -1,7 +1,7 @@
 include: "data.smk"
 
 
-def get_train_test(wildcards, pattern, train_test=None):
+def get_train_test(wildcards, pattern, train_test=None, source=None):
     """
     Translate train/test to dataset (source) identifier
     wildcards must contain 'source'
@@ -11,8 +11,16 @@ def get_train_test(wildcards, pattern, train_test=None):
             train_test = wildcards.train_test
         except:
             raise LookupError(f"Invalid train_test as wildcard or parameter: {train_test}")
+    if source is None:
+        try:
+            source = wildcards.source
+        except:
+            raise LookupError(f"Invalid source as wildcard or parameter: {source}")
+
     if train_test == 'test':
-        source = 'DiLiddo2019'
+        # NoChr has it's own test set
+        # Default test set is DiLiddo2019
+        source = 'DiLiddo2019' if source != 'NoChr' else 'NoChr_test'
     elif train_test == 'train':
         source = wildcards.source
     else:
