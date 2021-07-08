@@ -15,6 +15,7 @@ if __name__ == "__main__":
     from common import convert_seqs_to_matrix
 
     train_set = pd.read_table(snakemake.input['train_data'].__str__())
+    train_set = train_set[1:10]
     x_train = convert_seqs_to_matrix(train_set['encoded_seq'])
     y_train = keras.utils.to_categorical(train_set['label'], 2)
 
@@ -50,18 +51,31 @@ if __name__ == "__main__":
     model.compile(
         loss=losses.binary_crossentropy,
         optimizer="RMSprop",
-        metrics=['accuracy']
+        metrics=['accuracy', keras.metrics.Precision(), keras.metrics.Recall()]
     )
 
     print('fit model')
     history = model.fit(
         x_train, y_train,
         batch_size=128,
-        epochs=80,
+        epochs=4,
         validation_split=0.1
     )
 
-    pd.DataFrame.from_dict(history.history).to_csv(
+    df = pd.DataFrame.from_dict(history.history)
+    n_epochs = df.shape[0]
+
+    # long format
+    train_cols = [x for x in df.columns if not x.startswith("val")]
+    val_df = df[[x for x in df.columns if x.startswith("val")]]
+    val_df.columns = train_cols
+    df = pd.concat([df[train_cols], val_df])
+
+    df['dataset'] = [*n_epochs*['train'], *n_epochs*['validation']]
+    # add epochs
+    df['epoch'] = 2*[*range(n_epochs)]
+
+    df.to_csv(
         snakemake.output['training_stats'].__str__(),
         index=False,
         sep='\t'

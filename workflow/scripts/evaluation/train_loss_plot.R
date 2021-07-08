@@ -11,12 +11,14 @@ suppressPackageStartupMessages({
   library(data.table)
 })
 
-train_df <- fread(snakemake@input$train_eval)
-train_long <- melt(train_df, id.vars = 'epoch', variable.name = 'metric')
+train_dt <- fread(snakemake@input$train_stats)
+train_long <- melt(train_dt, id.vars = c('epoch', 'dataset'), variable.name = 'metric')
 
-ggplot(train_long, aes(epoch, value, col = metric)) +
+ggplot(train_long, aes(epoch, value, col = dataset)) +
   geom_line() +
+  facet_wrap(~metric) +
   scale_color_brewer(palette = 'Set1') +
-  theme_classic()
+  theme_classic() +
+  theme(legend.position = "bottom")
 
 ggsave(snakemake@output$plot)

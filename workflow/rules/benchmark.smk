@@ -1,6 +1,17 @@
 include: "feature_extraction.smk"
 
 
+rule training_performance:
+    """
+    Diagnostic plots for JEDI results
+    """
+    input:
+        train_stats=prediction_pattern + '/epochs.tsv'
+    output:
+        plot=prediction_pattern + '/train_epochs.png'
+    script: '../scripts/evaluation/train_loss_plot.R'
+
+
 rule train_circDeep:
     input:
         script='methods/circDeep/circDeep.py',
@@ -142,14 +153,13 @@ rule train_JEDI:
         config=rules.extract_data_JEDI.output.config
     output:
         # model=expand(model_pattern + '/model.tf',method='JEDI',allow_missing=True),
-        train_eval=expand(model_pattern + '/train_eval.tsv',method='JEDI',allow_missing=True),
-        test_eval=expand(model_pattern + '/test_eval.tsv',method='JEDI',allow_missing=True),
+        train_stats=expand(rules.training_performance.input[0],method='JEDI',allow_missing=True),
         prediction=expand(model_pattern + '/prediction.json',method='JEDI',allow_missing=True)[0]
     params:
         K=config['methods']['JEDI']['kmer_len'],
         L=config['methods']['JEDI']['flank_len'],
-        epochs=config['methods']['JEDI']['epochs'],
-    conda: '../envs/JEDI-gpu.yaml'
+        epochs=config['methods']['JEDI']['epochs']
+    conda: '../envs/JEDI.yaml'
     resources:
         mem_mb=64000,
         gpu=1
@@ -159,32 +169,18 @@ rule train_JEDI:
         python {input.script} --cv=0 --K={params.K} --L={params.L} \
             --emb_dim=128 --rnn_dim=128 --att_dim=16 --hidden_dim=128 \
             --num_epochs={params.epochs} --learning_rate=1e-3 --l2_reg=1e-3 \
-            --config {input.config}
+            --config {input.config} --train_stats {output.train_stats}
         out_path=$(grep path_pred {input.config} | cut -f2 -d' ')
         mv $out_path/pred.0.K{params.K}.L{params.L} {output.prediction}
-        mv $out_path/train_loss.0.K{params.K}.L{params.L} {output.train_eval}
-        mv $out_path/test_loss.0.K{params.K}.L{params.L} {output.test_eval}
         """
 
 
-rule diagnostic_JEDI:
-    """
-    Diagnostic plots for JEDI results
-    """
-    input:
-        train_eval=rules.train_JEDI.output.train_eval,
-        test_eval=rules.train_JEDI.output.train_eval,
-    output:
-        plot=expand(prediction_pattern + '/train_epochs.png',method='JEDI',allow_missing=True)[0]
-    script: '../scripts/evaluation/train_loss_plot.R'
-
-
-rule predict_JEDI:
+rule test_JEDI:
     """
     Translate predictions from JSON to TSV
     """
     input:
-        diagnostic=rules.diagnostic_JEDI.output,
+        epoch_plot=expand(rules.training_performance.output,method='JEDI',allow_missing=True),
         prediction=rules.train_JEDI.output.prediction
     output:
         prediction=expand(prediction_pattern + '/prediction.tsv',method='JEDI',allow_missing=True)[0]
@@ -208,7 +204,9 @@ rule train_DeepCirCode:
         model=directory(
             expand(model_pattern,method='DeepCirCode',allow_missing=True)[0]
         ),
-        training_stats=expand(model_pattern + '/training_stast.tsv',method='DeepCirCode',allow_missing=True)[0]
+        training_stats=expand(
+            rules.training_performance.input[0],method='DeepCirCode',allow_missing=True
+        )
     conda: '../envs/DeepCirCode_py3.yaml'
     resources:
         gpu=1,
@@ -219,6 +217,7 @@ rule train_DeepCirCode:
 rule test_DeepCirCode:
     input:
         common='workflow/scripts',
+        epoch_plot=expand(rules.training_performance.output,method='DeepCirCode',allow_missing=True),
         model=rules.train_DeepCirCode.output.model,
         test_data=lambda w: get_train_test(
             w,rules.extract_DeepCirCode_data.output.tsv,train_test="test"
