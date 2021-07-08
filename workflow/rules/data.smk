@@ -215,8 +215,8 @@ rule data_NoChr:
         test=config['processed_data'] + '/datasets/NoChr/test.bed'
     shell:
         """
-        cat {input.Wang} {input.DiLiddo} | grep -v -P 'chr9\t' > {output.train}
-        cat {input.Wang} {input.DiLiddo} | grep -P 'chr9\t' > {output.test} 
+        cat {input.Wang} {input.DiLiddo} | grep -v -P 'chr1\t' > {output.train}
+        cat {input.Wang} {input.DiLiddo} | grep -P 'chr1\t' > {output.test} 
         """
 
 
