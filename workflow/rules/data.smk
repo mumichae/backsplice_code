@@ -156,10 +156,11 @@ rule data_Chaabane2020:
             """
         )
         import pandas as pd
+
         for bedfile in output:
-            bed_df = pd.read_table(bedfile, sep='\t', header=None)
+            bed_df = pd.read_table(bedfile,sep='\t',header=None)
             bed_df['score'] = '.'
-            bed_df[[0,1,2,4,'score', 3]].to_csv(bedfile, sep='\t', index=False, header=False)
+            bed_df[[0, 1, 2, 4, 'score', 3]].to_csv(bedfile,sep='\t',index=False,header=False)
 
 
 rule data_Wang2019:
@@ -197,8 +198,22 @@ rule data_Wang2019:
 
             if i == 0:
                 # remove DiLiddo data for positive data
-                bed = bed.subtract(input.test_data, s=True, A=True)
+                bed = bed.subtract(input.test_data,s=True,A=True)
             bed.saveas(output[i])
+
+
+rule data_lncRNA:
+    input:
+        positive=rules.data_Wang2019.output.positive,
+        negative=rules.data_Chaabane2020.output.negative_bed,
+    output:
+        positive=config['processed_data'] + '/datasets/ncRNA/circRNA.bed',
+        negative=config['processed_data'] + '/datasets/ncRNA/lncRNA.bed'
+    shell:
+        """
+        cp {input.positive} {output.positive}
+        cp {input.negative} {output.negative}
+        """
 
 
 rule data_NoChr:
@@ -233,6 +248,8 @@ def get_positive_data(wildcards, source=None):
         return rules.data_DiLiddo2019.output.circRNA
     elif source == 'Wang2019':
         return rules.data_Wang2019.output.positive
+    elif source == 'lncRNA':
+        return rules.data_lncRNA.output.positive
     elif source == 'NoChr':
         return rules.data_NoChr.output.train
     elif source == 'NoChr_test':
@@ -268,8 +285,8 @@ def get_negative_data(wildcards, source=None):
             source = wildcards.source
         except:
             raise LookupError("Must define a valid source as wildcard or parameter")
-    if source == "Chaabane2020":
-        return rules.data_Chaabane2020.output.negative_bed
+    if source == 'lncRNA':
+        return rules.data_lncRNA.output.negative
     return expand(rules.get_linear_junctions.output.junctions,source=source)[0]
 
 
