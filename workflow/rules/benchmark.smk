@@ -207,7 +207,8 @@ rule train_DeepCirCode:
     output:
         model=directory(
             expand(model_pattern,method='DeepCirCode',allow_missing=True)[0]
-        )
+        ),
+        training_stats=expand(model_pattern + '/training_stast.tsv',method='DeepCirCode',allow_missing=True)[0]
     conda: '../envs/DeepCirCode_py3.yaml'
     resources:
         gpu=1,
@@ -215,7 +216,7 @@ rule train_DeepCirCode:
     script: '../scripts/models/DeepCirCode.py'
 
 
-rule predict_DeepCirCode:
+rule test_DeepCirCode:
     input:
         common='workflow/scripts',
         model=rules.train_DeepCirCode.output.model,
