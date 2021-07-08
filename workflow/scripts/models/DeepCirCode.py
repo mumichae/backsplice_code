@@ -54,11 +54,16 @@ if __name__ == "__main__":
     )
 
     print('fit model')
-    model.fit(
+    history = model.fit(
         x_train, y_train,
         batch_size=128,
         epochs=80,
         validation_split=0.1
     )
 
+    pd.DataFrame.from_dict(history.history).to_csv(
+        snakemake.output['training_stats'].__str__(),
+        index=False,
+        sep='\t'
+    )
     model.save(snakemake.output['model'].__str__())
