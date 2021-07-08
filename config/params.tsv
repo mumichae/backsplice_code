@@ -1,9 +1,13 @@
 method	source
-# circDeep	Chaabane2020
 SVM	Wang2019
 SVM	NoChr
+SVM	lncRNA
 RandomForest	Wang2019
 RandomForest	NoChr
+RandomForest	lncRNA
 JEDI	Wang2019
 JEDI	NoChr
-#DeepCirCode	Wang2019
+JEDI	lncRNA
+DeepCirCode	Wang2019
+DeepCirCode	NoChr
+DeepCirCode	lncRNA
