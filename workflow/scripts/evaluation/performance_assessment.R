@@ -35,7 +35,7 @@ predictions <- mapply(
 print(paste('read', length(predictions), 'files'))
 
 # confusion matrices
-conf <- lapply(predictions, function(x) {
+conf <- sapply(predictions, function(x) {
   table(x$label, x$prediction)
 })
 conf <- t(conf)
@@ -74,6 +74,7 @@ ggplot(per_melt) +
     mapping = aes(x = variable, y = value, fill = method),
     alpha = 0.8,
     stat = "identity",
+    size = 1.5,
     position = position_dodge2()
   ) +
   geom_text(
@@ -86,7 +87,10 @@ ggplot(per_melt) +
   scale_fill_brewer(palette = 'Set1') +
   #scale_fill_manual(name="Model", values=c("#66FF66", "#FF6600", "#CC0000", "#CC6699", "#9999CC"))+
   theme_classic() +
-  theme(legend.position = 'bottom')
+  theme(
+    legend.position = 'bottom',
+    axis.text.x = element_text(angle=45, vjust=1, hjust=1)
+  )
 
 ggsave(barplot_path, width = 2500, units = "px")
 
@@ -119,7 +123,7 @@ get_curve_dt <- function(predictions, curve) {
 
 get_auc_anno <- function(curve_dt) {
   anno_dt <- unique(curve_dt[, .(method, source, auc)])
-  anno_dt[, label := paste(method, source, ':', round(auc, 2))]
+  anno_dt[, label := paste(method, ':', round(auc, 2))]
   anno_dt[, x := 0.75]
   anno_dt[, y := 0.07 * .I]
   anno_dt
@@ -134,6 +138,7 @@ roc_anno <- get_auc_anno(roc_dt)
 ggplot(roc_dt, aes(1 - specificity, sensitivity, col = method)) +
   geom_path() +
   geom_abline(intercept = 0, slope = 1, linetype = "dotted") +
+  facet_wrap(~source) +
   coord_equal() +
   geom_text(
       data = roc_anno,
@@ -155,6 +160,7 @@ pr_anno <- get_auc_anno(pr_dt)
 
 ggplot(pr_dt, aes(recall, precision, col = method)) +
   geom_path() +
+  facet_wrap(~source) +
   coord_equal() +
   geom_text(
     data = pr_anno,
