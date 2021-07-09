@@ -94,6 +94,8 @@ rule train_RF:
         )
     output:
         model=expand(model_pattern + '/model.rds',method='RandomForest',allow_missing=True)[0]
+    benchmark:
+        config['output'] + '/benchmarks/RandomForest_{source}.txt'
     script: '../scripts/models/RandomForest.R'
 
 
@@ -124,6 +126,8 @@ rule train_SVM:
         )
     output:
         model=expand(model_pattern + '/model.rds',method='SVM',allow_missing=True)[0]
+    benchmark:
+        config['output'] + '/benchmarks/SVM_{source}.txt'
     script: '../scripts/models/SVM.R'
 
 
@@ -159,11 +163,13 @@ rule train_JEDI:
         K=config['methods']['JEDI']['kmer_len'],
         L=config['methods']['JEDI']['flank_len'],
         epochs=config['methods']['JEDI']['epochs']
-    conda: '../envs/JEDI.yaml'
+    conda: '../envs/JEDI-gpu.yaml'
     resources:
-        mem_mb=64000,
+        mem_mb=100000,
         gpu=1
-    # threads: 60
+    threads: 60
+    benchmark:
+        config['output'] + '/benchmarks/JEDI_{source}.txt'
     shell:
         """
         python {input.script} --cv=0 --K={params.K} --L={params.L} \
@@ -210,7 +216,9 @@ rule train_DeepCirCode:
     conda: '../envs/DeepCirCode_py3.yaml'
     resources:
         gpu=1,
-        mem_mb=64000
+        mem_mb=80000
+    benchmark:
+        config['output'] + '/benchmarks/DeepCirCode_{source}.txt'
     script: '../scripts/models/DeepCirCode.py'
 
 
@@ -237,7 +245,8 @@ rule evaluation:
     Collect all predictions in this rule
     """
     input:
-        predictions=expand(prediction_pattern + '/prediction.tsv',zip,**get_wildcards(params_df))
+        predictions=expand(prediction_pattern + '/prediction.tsv',zip,**get_wildcards(params_df)),
+        benchmark=expand(config['output'] + '/benchmarks/DeepCirCode_{source}.txt',zip,**get_wildcards(params_df))
     params:
         methods=params_df['method'].tolist(),
         sources=params_df['source'].tolist()
