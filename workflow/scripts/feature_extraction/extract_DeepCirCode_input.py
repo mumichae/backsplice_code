@@ -83,7 +83,7 @@ def process_bed(positive, negative):
             line = line.strip("\n").split("\t")
             chr = line[0]
             start = int(line[1]) - 1  # -1 to make it 0-based
-            end = int(line[2]) - 1    # -1 to make it 0-based
+            end = int(line[2]) - 1  # -1 to make it 0-based
             strand = line[5]
             name = line[3]
             # in the bed files, the chromosome is sometimes eg "chr17_GL000258v2_alt" instead of "chr17"
@@ -104,10 +104,10 @@ def get_sequences(chromosomes, dataset):
 
     output = []
     for junction in dataset:
-        up_i = chromosomes[junction[1]][int(junction[2])-50: int(junction[2])]
-        down_e = chromosomes[junction[1]][int(junction[2]): int(junction[2])+50]
-        up_e = chromosomes[junction[1]][int(junction[3])-49: int(junction[3])+1]
-        down_i = chromosomes[junction[1]][int(junction[3])+1: int(junction[3]+51)]
+        up_i = chromosomes[junction[1]][int(junction[2]) - 50: int(junction[2])]
+        down_e = chromosomes[junction[1]][int(junction[2]): int(junction[2]) + 50]
+        up_e = chromosomes[junction[1]][int(junction[3]) - 49: int(junction[3]) + 1]
+        down_i = chromosomes[junction[1]][int(junction[3]) + 1: int(junction[3] + 51)]
 
         # swap donor and acceptor site if backsplicing event, so that order of exons and introns is always the same:
         if junction[0] == '1':
@@ -120,6 +120,11 @@ def get_sequences(chromosomes, dataset):
             sequence = sequence.reverse_complement()
 
         sequence = str(sequence.seq).upper()
+
+        if 'N' in sequence:
+            print('skip sequence containing "N"')
+            continue
+
         output.append([junction[0], sequence, junction[5]])
     return output
 
@@ -137,11 +142,10 @@ def encode_and_write(dataset, output, output_x, output_y):
             enc += encoder[residue]
         output.write(data_point[0] + "\t" + data_point[1] + "\t" + enc + "\t" + data_point[2] + "\n")
         output_x.write(enc + "\n")
-        output_y.write(str(abs(int(data_point[0])-1)) + data_point[0] + "\n")
+        output_y.write(str(abs(int(data_point[0]) - 1)) + data_point[0] + "\n")
 
 
 if __name__ == "__main__":
-
     # 1. parse parameters
     args = parser()
 
