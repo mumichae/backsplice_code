@@ -74,13 +74,12 @@ ggplot(per_melt) +
     mapping = aes(x = variable, y = value, fill = method),
     alpha = 0.8,
     stat = "identity",
-    size = 1.5,
     position = position_dodge2()
   ) +
   geom_text(
     aes(x = variable, y = -0.02, label = round(value, 2)),
     position = position_dodge2(width = 0.9),
-    size = 3.5
+    size = 3
   ) +
   facet_wrap(~source) +
   labs(title = "Performance Assessment", x = "metric", y = "performance") +
@@ -88,11 +87,11 @@ ggplot(per_melt) +
   #scale_fill_manual(name="Model", values=c("#66FF66", "#FF6600", "#CC0000", "#CC6699", "#9999CC"))+
   theme_classic() +
   theme(
-    legend.position = 'bottom',
+    legend.position = 'top',
     axis.text.x = element_text(angle=45, vjust=1, hjust=1)
   )
 
-ggsave(barplot_path, width = 2500, units = "px")
+ggsave(barplot_path, width = 8, height=8)
 
 
 get_curve_dt <- function(predictions, curve) {
@@ -148,9 +147,10 @@ ggplot(roc_dt, aes(1 - specificity, sensitivity, col = method)) +
   ) +
   labs(title = 'ROC Curves') +
   scale_color_brewer(palette = 'Dark2') +
-  theme_classic()
+  theme_classic() +
+  theme(legend.position = 'top')
 
-ggsave(roc_path)
+ggsave(roc_path, width = 8, height = 9)
 
 
 # Precision-Recall curves
@@ -170,7 +170,8 @@ ggplot(pr_dt, aes(recall, precision, col = method)) +
   ) +
   labs(title = 'Precision-recall Curves') +
   scale_color_brewer(palette = 'Dark2') +
-  theme_classic()
+  theme_classic() +
+  theme(legend.position = 'top')
 
-ggsave(pr_path)
+ggsave(pr_path, width = 8, height = 9)
 
