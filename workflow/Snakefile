@@ -18,6 +18,8 @@ def get_wildcards(params, wildcards=None):
     return wildcards_dict
 
 
+all_sources = params_df['source'].unique().tolist()
+
 tmpdir = config['processed_data'] + '/tmp'
 model_pattern = config['models'] + '/{method}/{source}'
 feature_pattern = config['processed_data'] + '/features/{method}/{source}'

@@ -43,7 +43,9 @@ rule extract_data_JEDI:
         path_data=expand(feature_pattern,method='JEDI',allow_missing=True),
         path_pred=expand(prediction_pattern,method='JEDI',allow_missing=True),
         id_key=config['gene_annotations'][assembly]['transcript_column']
-    threads: 60
+    threads: 40
+    resources:
+        mem_mb=100000
     run:
         shell('mkdir -p {params.path_data}')
         shell('mkdir -p {params.path_pred}')
@@ -68,7 +70,7 @@ rule extract_data_JEDI:
 
 
 rule all_extract_data_JEDI:
-    input: expand(rules.extract_data_JEDI.output,source=['DiLiddo2019', 'Wang2019'])
+    input: expand(rules.extract_data_JEDI.output,source=all_sources)
 
 
 rule extract_features_JEDI:
@@ -81,6 +83,8 @@ rule extract_features_JEDI:
         negative=lambda w: get_train_test(w,rules.extract_data_JEDI.output.negative),
     output:
         features=expand(feature_pattern + '/data.0.K{K}.L{L}.{train_test}',method='JEDI',allow_missing=True),
+    resources:
+        mem_mb=100000
     shell:
         """
         python {input.script} {input.positive} {input.negative} {wildcards.K} {wildcards.L} {output}
@@ -104,7 +108,7 @@ rule collect_features_JEDI:
 
 rule all_extract_features_JEDI:
     input:
-        expand(rules.collect_features_JEDI.input,source=['Wang2019'])
+        expand(rules.collect_features_JEDI.input,source=all_sources)
 
 
 # rule get_Wang2019_training_set:
@@ -159,7 +163,7 @@ rule extract_DeepCirCode_data:
 
 
 rule all_extract_DeepCirCode_data:
-    input: expand(rules.extract_DeepCirCode_data.output,source=['DiLiddo2019', 'Wang2019'])
+    input: expand(rules.extract_DeepCirCode_data.output,source=all_sources)
 
 
 rule SVM_RF_features:

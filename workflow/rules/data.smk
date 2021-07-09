@@ -223,15 +223,15 @@ rule data_NoChr:
     Remove all high-confidence circRNA test data from DiLiddo2019
     """
     input:
-        Wang=rules.data_Wang2019.output.positive,
+        Chaabane=rules.data_Chaabane2020.output.positive_bed,
         DiLiddo=rules.data_DiLiddo2019.output.circRNA
     output:
         train=config['processed_data'] + '/datasets/NoChr/train.bed',
         test=config['processed_data'] + '/datasets/NoChr/test.bed'
     shell:
         """
-        cat {input.Wang} {input.DiLiddo} | grep -v -P 'chr1\t' > {output.train}
-        cat {input.Wang} {input.DiLiddo} | grep -P 'chr1\t' > {output.test} 
+        cat {input.Chaabane} {input.DiLiddo} | grep -v -P 'chr1\t' > {output.train}
+        cat {input.Chaabane} {input.DiLiddo} | grep -P 'chr1\t' > {output.test} 
         """
 
 
@@ -335,3 +335,10 @@ def get_test_data(wildcards, source=None):
     if source == 'DiLiddo2019':
         return rules.data_DiLiddo2019.output.circRNA
     return rules.split_train_test.output.test
+
+
+rule all_data:
+    input: 
+        positive=lambda w: [get_positive_data(w, source=source) for source in all_sources],
+        negative=lambda w: [get_negative_data(w, source=source) for source in all_sources]
+
