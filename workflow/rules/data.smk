@@ -136,11 +136,13 @@ rule data_Chaabane2020:
     Dataset used by Chaabane et al. 2020 (circDeep)
     Processed negative (GENCODE lncRNAs) and positive (circRNADb) datasets, as well as test data
     Subset to canonical chromosomes
+    Remove DiLiddo Dataset from positive data
     """
     input:
         positive_bed='methods/circDeep/data/circRNA_dataset.bed',
         negative_bed='methods/circDeep/data/negative_dataset.bed',
-        test_bed='methods/circDeep/data/test.bed'
+        test_bed='methods/circDeep/data/test.bed',
+        test_DiLidddo=rules.data_DiLiddo2019.output.circRNA
     output:
         positive_bed=config['processed_data'] + '/datasets/Chaabane2020/circRNA.bed',
         negative_bed=config['processed_data'] + '/datasets/Chaabane2020/negative.bed',
@@ -162,11 +164,18 @@ rule data_Chaabane2020:
             bed_df['score'] = '.'
             bed_df[[0, 1, 2, 4, 'score', 3]].to_csv(bedfile,sep='\t',index=False,header=False)
 
+        shell(
+            """
+            bedtools subtract -a {output.positive_bed} -b {input.test_DiLidddo} -s -A > tmp_chaab.bed
+            mv tmp_chaab.bed {output.positive_bed}
+            """
+        )
+
 
 rule data_Wang2019:
     """
     Dataset used by Wang et al. 2019 (DeepCirCode)
-    Processed negative (GENCODE lncRNAs) and positive (circRNADb & circBase) datasets
+    Processed negative (linear junctions in same transcript?) and positive (circRNADb & circBase) datasets
     Remove all high-confidence circRNA test data from DiLiddo2019
     """
     input:
