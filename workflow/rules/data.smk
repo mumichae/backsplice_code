@@ -232,7 +232,7 @@ rule data_NoChr:
     Remove all high-confidence circRNA test data from DiLiddo2019
     """
     input:
-        Chaabane=rules.data_Chaabane2020.output.positive_bed,
+        Chaabane=rules.data_Wang2019.output.positive,
         DiLiddo=rules.data_DiLiddo2019.output.circRNA
     output:
         train=config['processed_data'] + '/datasets/NoChr/train.bed',
