@@ -165,9 +165,8 @@ rule train_JEDI:
         epochs=config['methods']['JEDI']['epochs']
     conda: '../envs/JEDI-gpu.yaml'
     resources:
-        mem_mb=100000,
+        mem_mb=64000,
         gpu=1
-    threads: 60
     benchmark:
         config['output'] + '/benchmarks/JEDI_{source}.txt'
     shell:
@@ -237,6 +236,15 @@ rule test_DeepCirCode:
         gpu=0,
         mem_mb=64000
     script: '../scripts/models/DeepCirCode_predict.py'
+
+
+rule JEDI:
+    input: expand(prediction_pattern + '/prediction.tsv', method='JEDI', source=all_sources)
+
+
+rule others:
+    input: expand(prediction_pattern + '/prediction.tsv', method=['SVM', 'RandomForest', 'DeepCirCode'], source=all_sources)
+
 
 
 rule evaluation:
