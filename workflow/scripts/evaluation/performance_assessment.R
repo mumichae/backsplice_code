@@ -77,9 +77,10 @@ ggplot(per_melt) +
     position = position_dodge2()
   ) +
   geom_text(
-    aes(x = variable, y = -0.02, label = round(value, 2)),
+    aes(x = variable, y = -0.05, label = round(value, 2)),
     position = position_dodge2(width = 0.9),
-    size = 3
+    size = 2,
+    angle = 90
   ) +
   facet_wrap(~source) +
   labs(title = "Performance Assessment", x = "metric", y = "performance") +
@@ -91,7 +92,7 @@ ggplot(per_melt) +
     axis.text.x = element_text(angle=45, vjust=1, hjust=1)
   )
 
-ggsave(barplot_path, width = 8, height=8)
+ggsave(barplot_path, width = 9, height=9)
 
 
 get_curve_dt <- function(predictions, curve) {
@@ -120,11 +121,11 @@ get_curve_dt <- function(predictions, curve) {
 }
 
 
-get_auc_anno <- function(curve_dt) {
+get_auc_anno <- function(curve_dt, x_pos = 0.75) {
   anno_dt <- unique(curve_dt[, .(method, source, auc)])
   anno_dt[, label := paste(method, ':', round(auc, 2))]
-  anno_dt[, x := 0.75]
-  anno_dt[, y := 0.07 * .I]
+  anno_dt[, x := x_pos]
+  anno_dt[, y := 0.02 * .I]
   anno_dt
 }
 
@@ -141,9 +142,10 @@ ggplot(roc_dt, aes(1 - specificity, sensitivity, col = method)) +
   coord_equal() +
   geom_text(
       data = roc_anno,
-        mapping = aes(x, y, col = method),
-        label = roc_anno$label,
-        inherit.aes = FALSE
+      mapping = aes(x, y, col = method),
+      label = roc_anno$label,
+      size = 2,
+      inherit.aes = FALSE
   ) +
   labs(title = 'ROC Curves') +
   scale_color_brewer(palette = 'Dark2') +
@@ -156,7 +158,7 @@ ggsave(roc_path, width = 8, height = 9)
 # Precision-Recall curves
 print('Precision-recall curve')
 pr_dt <- get_curve_dt(predictions, 'PR')
-pr_anno <- get_auc_anno(pr_dt)
+pr_anno <- get_auc_anno(pr_dt, x_pos = 0.25)
 
 ggplot(pr_dt, aes(recall, precision, col = method)) +
   geom_path() +
@@ -166,6 +168,7 @@ ggplot(pr_dt, aes(recall, precision, col = method)) +
     data = pr_anno,
     mapping = aes(x, y, col = method),
     label = pr_anno$label,
+    size = 2,
     inherit.aes = FALSE
   ) +
   labs(title = 'Precision-recall Curves') +
