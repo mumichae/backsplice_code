@@ -217,12 +217,20 @@ rule data_lncRNA:
         negative=rules.data_Chaabane2020.output.negative_bed,
     output:
         positive=config['processed_data'] + '/datasets/ncRNA/circRNA.bed',
-        negative=config['processed_data'] + '/datasets/ncRNA/lncRNA.bed'
-    shell:
-        """
-        cp {input.positive} {output.positive}
-        cp {input.negative} {output.negative}
-        """
+        negative_train=config['processed_data'] + '/datasets/ncRNA/lncRNA_train.bed',
+        negative_test=config['processed_data'] + '/datasets/ncRNA/lncRNA_test.bed',
+    run:
+        shell("cp {input.positive} {output.positive}")
+        # split test and train set
+        n_all = shell("wc -l {input.negative} | cut -f1 -d' '",read=True)
+        n_train = int(float(n_all) * 0.9)
+        shell(
+            """
+            shuf {input.negative} | split -l {n_train}
+            mv xaa {output.negative_train}
+            mv xab {output.negative_test}
+            """
+        )
 
 
 rule data_NoChr:
