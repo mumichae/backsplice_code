@@ -230,7 +230,8 @@ rule test_DeepCirCode:
             w,rules.extract_DeepCirCode_data.output.tsv,train_test="test"
         )
     output:
-        prediction=expand(prediction_pattern + '/prediction.tsv',method='DeepCirCode',allow_missing=True)[0]
+        prediction=expand(prediction_pattern + '/prediction.tsv',method='DeepCirCode',allow_missing=True)[0],
+        motifs=expand(prediction_pattern + '/motifs.txt',method='DeepCirCode',allow_missing=True)[0]
     conda: '../envs/DeepCirCode_py3.yaml'
     resources:
         gpu=0,
