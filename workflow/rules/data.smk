@@ -61,7 +61,8 @@ rule canonical_gtf:
         wget -nc {params.url} -O {output.gtf}.gz
         zcat {output.gtf}.gz \
             | grep -v '#' \
-            | sed 's/^/{params.chr_prefix}/' > {output.gtf}
+            | sed 's/^/{params.chr_prefix}/' > {output.gtf}.unsorted
+        bedtools sort -i {output.gtf}.unsorted > {output.gtf}
         grep -P '\texon\t' {output.gtf} > {output.exons}
         grep -P '\ttranscript\t' {output.gtf} > {output.transcripts}
         """
@@ -248,7 +249,7 @@ rule data_NoChr:
     shell:
         """
         cat {input.Chaabane} {input.DiLiddo} | grep -v -P 'chr1\t' > {output.train}
-        cat {input.Chaabane} {input.DiLiddo} | grep -P 'chr1\t' > {output.test} 
+        cat {input.Chaabane} {input.DiLiddo} | grep -P 'chr1\t' > {output.test}
         """
 
 
@@ -283,28 +284,60 @@ rule get_linear_junctions:
     """
     input:
         script='workflow/scripts/data/get_linear_junctions.py',
-        gtf=rules.canonical_gtf.output[0],
+        gtf=rules.canonical_gtf.output.gtf,
         circ=get_positive_data
     output:
-        junctions=config['processed_data'] + '/datasets/linear_junctions/{source}.bed'
+        junctions=config['processed_data'] + '/datasets/{source}/junctions_overlapping.bed',
+        flanking_junctions=config['processed_data'] + '/datasets/{source}/junctions_flanking.bed',
     shell:
         """
         python {input.script} \
             -gtf {input.gtf} \
             -circ {input.circ} \
-            -o {output.junctions}
+            -junc {output.junctions} \
+            -flank_junc {output.flanking_junctions}
         """
 
 
-def get_negative_data(wildcards, source=None):
+rule get_overlapping:
+    input:
+        positive=get_positive_data,
+        gtf=rules.canonical_gtf.output.gtf
+    output:
+        genes=config['processed_data'] + '/datasets/{source}/genes_overlapping.gtf',
+        transcripts=config['processed_data'] + '/datasets/{source}/transcripts_overlapping.gtf'
+    shell:
+        """
+        grep -P '\tgene\t' {input.gtf} > tmp_gene.gtf
+        bedtools intersect -a tmp_gene.gtf -b {input.positive} -wa -s > {output.genes}
+        grep -P '\ttranscript\t' {input.gtf} > tmp_tx.gtf
+        bedtools intersect -a tmp_tx.gtf -b {input.positive} -wa -s > {output.transcripts}
+        """
+
+
+def get_negative_data(wildcards, source=None, method=None):
     if source is None:
         try:
             source = wildcards.source
         except:
             raise LookupError("Must define a valid source as wildcard or parameter")
-    if source == 'lncRNA':
-        return rules.data_lncRNA.output.negative
-    return expand(rules.get_linear_junctions.output.junctions,source=source)[0]
+    if method is None:
+        try:
+            method = wildcards.method
+        except:
+            raise LookupError("Must define a valid method as wildcard or parameter")
+
+    if source.startswith('lncRNA'):
+        if method == 'JEDI':
+            target = rules.data_lncRNA.output.negative_train
+        else:  # method = in [DeepCirCode, SVM, RandomForest]
+            target = rules.get_linear_junctions.output.junctions
+    else:
+        if method == 'JEDI':
+            target = rules.get_overlapping.output.genes
+        else:  # method = in [DeepCirCode, SVM, RandomForest]
+            target = rules.get_linear_junctions.output.flanking_junctions
+    return expand(target,source=source)[0]
 
 
 # Split datasets for training and evaluation
@@ -355,7 +388,6 @@ def get_test_data(wildcards, source=None):
 
 
 rule all_data:
-    input: 
-        positive=lambda w: [get_positive_data(w, source=source) for source in all_sources],
-        negative=lambda w: [get_negative_data(w, source=source) for source in all_sources]
-
+    input:
+        positive=lambda w: [get_positive_data(w,source=source) for source in all_sources],
+        negative=lambda w: [get_negative_data(w,source=source) for source in all_sources]
