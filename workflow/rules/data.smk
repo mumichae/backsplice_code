@@ -326,11 +326,11 @@ rule get_overlapping:
         transcripts=config['processed_data'] + '/datasets/{source}/transcripts_overlapping.gtf'
     shell:
         """
-        grep -P '\tgene\t' {input.gtf} > tmp.gtf
-        bedtools intersect -a tmp.gtf -b {input.positive} -wa -s > {output.genes}
-        grep -P '\ttranscript\t' {input.gtf} > tmp.gtf
-        bedtools intersect -a tmp.gtf -b {input.positive} -wa -s > {output.transcripts}
-        rm tmp.gtf
+        grep -P '\tgene\t' {input.gtf} > tmp_{wildcards.source}.gtf
+        bedtools intersect -a tmp_{wildcards.source}.gtf -b {input.positive} -wa -s > {output.genes}
+        grep -P '\ttranscript\t' {input.gtf} > tmp_{wildcards.source}.gtf
+        bedtools intersect -a tmp_{wildcards.source}.gtf -b {input.positive} -wa -s > {output.transcripts}
+        rm tmp_{wildcards.source}.gtf
         """
 
 
