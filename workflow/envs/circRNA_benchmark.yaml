@@ -4,6 +4,7 @@ channels:
   - bioconda
 dependencies:
   - python=3.9
+  - pip
   - pandas
   - snakemake>=6.5
   - genomepy
@@ -14,6 +15,7 @@ dependencies:
   - ucsc-liftover
   - ujson
   - gtfparse
+  - pyranges
   - rsync
   - joblib
   - r-base
@@ -27,4 +29,6 @@ dependencies:
   - r-e1071
   - r-yardstick
   - r-mltools
+  - pip:
+      - ray[default]
 

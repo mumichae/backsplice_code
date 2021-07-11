@@ -278,27 +278,6 @@ def get_positive_data(wildcards, source=None):
 
 # processed negative data
 
-rule get_linear_junctions:
-    """
-    Get linear junctions subset to circular junctions
-    """
-    input:
-        script='workflow/scripts/data/get_linear_junctions.py',
-        gtf=rules.canonical_gtf.output.gtf,
-        circ=get_positive_data
-    output:
-        junctions=config['processed_data'] + '/datasets/{source}/junctions_overlapping.bed',
-        flanking_junctions=config['processed_data'] + '/datasets/{source}/junctions_flanking.bed',
-    shell:
-        """
-        python {input.script} \
-            -gtf {input.gtf} \
-            -circ {input.circ} \
-            -junc {output.junctions} \
-            -flank_junc {output.flanking_junctions}
-        """
-
-
 rule get_overlapping:
     input:
         positive=get_positive_data,
@@ -308,11 +287,54 @@ rule get_overlapping:
         transcripts=config['processed_data'] + '/datasets/{source}/transcripts_overlapping.gtf'
     shell:
         """
-        grep -P '\tgene\t' {input.gtf} > tmp_gene.gtf
-        bedtools intersect -a tmp_gene.gtf -b {input.positive} -wa -s > {output.genes}
-        grep -P '\ttranscript\t' {input.gtf} > tmp_tx.gtf
-        bedtools intersect -a tmp_tx.gtf -b {input.positive} -wa -s > {output.transcripts}
+        grep -P '\tgene\t' {input.gtf} > tmp.gtf
+        bedtools intersect -a tmp.gtf -b {input.positive} -wa -s > {output.genes}
+        grep -P '\ttranscript\t' {input.gtf} > tmp.gtf
+        bedtools intersect -a tmp.gtf -b {input.positive} -wa -s > {output.transcripts}
+        rm tmp.gtf
         """
+
+
+rule get_linear_junctions:
+    """
+    Get linear junctions subset to circular junctions
+    """
+    input:
+        script='workflow/scripts/data/get_linear_junctions.py',
+        gtf=rules.canonical_gtf.output.gtf,
+        circ=get_positive_data,
+        overlapping_transcripts=rules.get_overlapping.output.transcripts
+    output:
+        junctions=config['processed_data'] + '/datasets/{source}/junctions_overlapping.bed',
+        flanking_junctions=config['processed_data'] + '/datasets/{source}/junctions_flanking.bed'
+    threads: 10
+    run:
+        import pyranges as pr
+
+        gtf = pr.read_gtf(input['gtf'])
+        print('read GTF')
+        transcripts = pr.read_gtf(input['overlapping_transcripts'])
+        print('read transcripts')
+        circ = pr.read_bed(input['circ'])
+        print('read circRNA BED')
+
+        introns = gtf.features.introns(by='transcript').set_intersect(
+            transcripts,strandedness='same',how='containment'
+        )
+        introns.to_bed(output.junctions)
+        print('wrote all junctions')
+
+        flanking = introns.nearest(circ,strandedness='same')
+        flanking[flanking.df['Distance'] <= 1].to_bed(output.flanking_junctions)
+        print('wrote all flanking junctions')
+# shell:
+#     """
+#     python {input.script} \
+#         -gtf {input.gtf} \
+#         -circ {input.circ} \
+#         -junc {output.junctions} \
+#         -flank_junc {output.flanking_junctions}
+#     """
 
 
 def get_negative_data(wildcards, source=None, method=None):
