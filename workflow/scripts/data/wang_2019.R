@@ -74,8 +74,10 @@ test <-  data.frame(read.table(snakemake@input$test_data, sep = "\t", header = T
 freq_train <- get_frequencies(train)
 freq_test <- get_frequencies(test)
 
-saveRDS(freq_train, snakemake@output$train)
-saveRDS(freq_test, snakemake@output$test)
+saveRDS(freq_train, snakemake@output$train_features)
+saveRDS(freq_test, snakemake@output$test_features)
 
+write.table(freq_train, snakemake@output$train_features_2, sep = "\t", col.names = FALSE)
+write.table(freq_test, snakemake@output$test_features_2, sep = "\t", col.names = FALSE)
 # TODO: save all necessary output
 #fwrite(HumanTrain, snakemake@output$train, sep = '\t')

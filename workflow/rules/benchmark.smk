@@ -88,15 +88,15 @@ rule train_RF:
     trains the Random Forest on given data
     """
     input:
-        train_features=rules.SVM_RF_features.output.train_features,
+        train_features=rules.SVM_RF_features.output.train_features_2,
         train_labels=lambda w: get_train_test(
             w,rules.extract_DeepCirCode_data.output.labels,train_test="train"
         )
     output:
-        model=expand(model_pattern + '/model.rds',method='RandomForest',allow_missing=True)[0]
+        model=expand(model_pattern + '/model.pkl',method='RandomForest',allow_missing=True)[0]
     benchmark:
         config['output'] + '/benchmarks/RandomForest_{source}.txt'
-    script: '../scripts/models/RandomForest.R'
+    script: '../scripts/models/RandomForest_train.py'
 
 
 rule test_RF:
@@ -105,14 +105,14 @@ rule test_RF:
     """
     input:
         model=rules.train_RF.output.model,
-        test_features=rules.SVM_RF_features.output.test_features,
+        test_features=rules.SVM_RF_features.output.test_features_2,
         test_labels=lambda w: get_train_test(
             w,rules.extract_DeepCirCode_data.output.labels,train_test="test"
         )
     output:
         prediction=expand(prediction_pattern + '/prediction.tsv',method='RandomForest',allow_missing=True)[0],
-        plot=expand(prediction_pattern + '/roc.jpg',method='RandomForest',allow_missing=True)[0],
-    script: '../scripts/models/RandomForest_predict.R'
+        #plot=expand(prediction_pattern + '/roc.jpg',method='RandomForest',allow_missing=True)[0],
+    script: '../scripts/models/RandomForest_test.py'
 
 
 rule train_SVM:
@@ -120,15 +120,15 @@ rule train_SVM:
     trains the Support Vector Machine on given data
     """
     input:
-        train_features=rules.SVM_RF_features.output.train_features,
+        train_features=rules.SVM_RF_features.output.train_features_2,		# instead of train_features
         train_labels=lambda w: get_train_test(
             w,rules.extract_DeepCirCode_data.output.labels,train_test="train"
         )
     output:
-        model=expand(model_pattern + '/model.rds',method='SVM',allow_missing=True)[0]
+        model=expand(model_pattern + '/model.pkl',method='SVM',allow_missing=True)[0]	# instead of model.rds
     benchmark:
         config['output'] + '/benchmarks/SVM_{source}.txt'
-    script: '../scripts/models/SVM.R'
+    script: '../scripts/models/SVM_train.py'	# instead of SVM.R
 
 
 rule test_SVM:
@@ -137,14 +137,14 @@ rule test_SVM:
     """
     input:
         model=rules.train_SVM.output.model,
-        test_features=rules.SVM_RF_features.output.test_features,
+        test_features=rules.SVM_RF_features.output.test_features_2,
         test_labels=lambda w: get_train_test(
             w,rules.extract_DeepCirCode_data.output.labels,train_test="test"
         )
     output:
         prediction=expand(prediction_pattern + '/prediction.tsv',method='SVM',allow_missing=True)[0],
-        plot=expand(prediction_pattern + '/roc.jpg',method='SVM',allow_missing=True)[0],
-    script: '../scripts/models/SVM_predict.R'
+        #plot=expand(prediction_pattern + '/roc.jpg',method='SVM',allow_missing=True)[0],
+    script: '../scripts/models/SVM_test.py' 	#instead of SVM_predict.R'
 
 
 rule train_JEDI:
