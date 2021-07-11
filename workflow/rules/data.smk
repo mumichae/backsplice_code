@@ -280,15 +280,15 @@ rule data_NoChr:
     Remove all high-confidence circRNA test data from DiLiddo2019
     """
     input:
-        Chaabane=rules.data_Wang2019.output.positive,
+        Wang=rules.data_Wang2019.output.positive,
         DiLiddo=rules.data_DiLiddo2019.output.circRNA
     output:
         train=config['processed_data'] + '/datasets/NoChr/train.bed',
         test=config['processed_data'] + '/datasets/NoChr/test.bed'
     shell:
         """
-        cat {input.Chaabane} {input.DiLiddo} | grep -v -P 'chr1\t' > {output.train}
-        cat {input.Chaabane} {input.DiLiddo} | grep -P 'chr1\t' > {output.test}
+        cat {input.Wang} {input.DiLiddo} | grep -v -P 'chr1\t' > {output.train}
+        cat {input.Wang} {input.DiLiddo} | grep -P 'chr1\t' > {output.test}
         """
 
 
