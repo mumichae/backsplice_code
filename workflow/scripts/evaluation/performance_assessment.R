@@ -125,10 +125,18 @@ get_auc_anno <- function(curve_dt, x_pos = 0.75) {
   anno_dt <- unique(curve_dt[, .(method, source, auc)])
   anno_dt[, label := paste(method, ':', round(auc, 2))]
   anno_dt[, x := x_pos]
-  anno_dt[, y := 0.02 * .I]
+  anno_dt[, y := 0.03 * .I]
   anno_dt
 }
 
+
+if (uniqueN(sources) == 1) {
+    width <- 5
+    height <- 6
+} else {
+    width <- 8
+    height <- 9
+}
 
 # ROC curves
 print('ROC curves')
@@ -144,15 +152,15 @@ ggplot(roc_dt, aes(1 - specificity, sensitivity, col = method)) +
       data = roc_anno,
       mapping = aes(x, y, col = method),
       label = roc_anno$label,
-      size = 2,
+      size = 3,
       inherit.aes = FALSE
   ) +
   labs(title = 'ROC Curves') +
-  scale_color_brewer(palette = 'Dark2') +
+  scale_color_brewer(palette = 'Set1') +
   theme_classic() +
   theme(legend.position = 'top')
 
-ggsave(roc_path, width = 8, height = 9)
+ggsave(roc_path, width = width, height = height)
 
 
 # Precision-Recall curves
@@ -168,13 +176,13 @@ ggplot(pr_dt, aes(recall, precision, col = method)) +
     data = pr_anno,
     mapping = aes(x, y, col = method),
     label = pr_anno$label,
-    size = 2,
+    size = 3,
     inherit.aes = FALSE
   ) +
   labs(title = 'Precision-recall Curves') +
-  scale_color_brewer(palette = 'Dark2') +
+  scale_color_brewer(palette = 'Set1') +
   theme_classic() +
   theme(legend.position = 'top')
 
-ggsave(pr_path, width = 8, height = 9)
+ggsave(pr_path, width = width, height = height)
 
