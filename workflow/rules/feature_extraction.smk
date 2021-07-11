@@ -75,7 +75,7 @@ rule extract_data_JEDI:
 
 
 rule all_extract_data_JEDI:
-    input: expand(rules.extract_data_JEDI.output,source=all_sources)
+    input: expand(rules.extract_data_JEDI.output,source=all_sources + ['lncRNA_orig'])
 
 
 rule extract_features_JEDI:
@@ -113,7 +113,7 @@ rule collect_features_JEDI:
 
 rule all_extract_features_JEDI:
     input:
-        expand(rules.collect_features_JEDI.input,source=all_sources)
+        expand(rules.collect_features_JEDI.input,source=all_sources + ['lncRNA_orig'])
 
 
 rule extract_DeepCirCode_data:
@@ -142,7 +142,7 @@ rule extract_DeepCirCode_data:
 
 
 rule all_extract_DeepCirCode_data:
-    input: expand(rules.extract_DeepCirCode_data.output,source=all_sources)
+    input: expand(rules.extract_DeepCirCode_data.output,source=all_sources + ['lncRNA_orig'])
 
 
 rule SVM_RF_features:
