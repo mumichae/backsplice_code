@@ -23,8 +23,8 @@ gene_annotations:
     chr_prefix: ''
     url: ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_38/gencode.v38.annotation.gtf.gz
 #    ftp.ensembl.org/pub/release-104/gtf/homo_sapiens/Homo_sapiens.GRCh38.104.chr.gtf.gz
-
     transcript_column: transcript_id
+    gene_column: gene_id
 
 methods:
   JEDI:

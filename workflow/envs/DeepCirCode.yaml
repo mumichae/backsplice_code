@@ -1,4 +1,4 @@
-name: DeepCirCode
+name: DeepCirCode_old
 channels:
   - conda-forge
   - bioconda
