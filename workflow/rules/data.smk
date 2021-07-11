@@ -50,7 +50,8 @@ rule canonical_gtf:
     output:
         gtf=config['processed_data'] + f"/reference/{assembly}/{assembly}.canonical.gtf",
         exons=config['processed_data'] + f"/reference/{assembly}/{assembly}.exons.gtf",
-        transcripts=config['processed_data'] + f"/reference/{assembly}/{assembly}.transcripts.gtf"
+        transcripts=config['processed_data'] + f"/reference/{assembly}/{assembly}.transcripts.gtf",
+        ncRNA=config['processed_data'] + f"/reference/{assembly}/{assembly}.ncRNA.gtf"
     params:
         chroms='|'.join(canonical_chroms),
         url=config['gene_annotations'][assembly]['url'],
@@ -65,6 +66,7 @@ rule canonical_gtf:
         bedtools sort -i {output.gtf}.unsorted > {output.gtf}
         grep -P '\texon\t' {output.gtf} > {output.exons}
         grep -P '\ttranscript\t' {output.gtf} > {output.transcripts}
+        grep -v 'protein_coding' {output.gtf} > {output.ncRNA}
         """
 
 
@@ -344,27 +346,28 @@ rule get_linear_junctions:
         circ=get_positive_data,
         overlapping_transcripts=rules.get_overlapping.output.transcripts
     output:
-        #junctions=config['processed_data'] + '/datasets/{source}/junctions_overlapping.bed',
+        junctions=config['processed_data'] + '/datasets/{source}/junctions_overlapping.bed',
         flanking_junctions=config['processed_data'] + '/datasets/{source}/junctions_flanking.bed'
     run:
         import pyranges as pr
 
         gtf = pr.read_gtf(input['gtf'])
         print('read GTF')
-        transcripts = pr.read_gtf(input['overlapping_transcripts'])
+        transcripts = pr.read_gtf(input['overlapping_transcripts']).drop()
         print('read transcripts')
         circ = pr.read_bed(input['circ'])
         print('read circRNA BED')
 
-        introns = gtf.features.introns(by='transcript').set_intersect(
-            transcripts,strandedness='same',how='containment'
-        )
-        # introns.to_bed(output.junctions)
-        # print('wrote all junctions')
+        introns = gtf.overlap(transcripts,strandedness='same') \
+            .features.introns(by='transcript') \
+            .drop_duplicate_positions(strand=True,keep='first')
+        introns.to_bed(output.junctions)
+        print('wrote all junctions')
 
         flanking = introns.nearest(circ,strandedness='same')
-        flanking[flanking.df['Distance'] <= 1].to_bed(output.flanking_junctions)
+        flanking[flanking.df['Distance'] == 1].to_bed(output.flanking_junctions)
         print('wrote all flanking junctions')
+
 # shell:
 #     """
 #     python {input.script} \
@@ -381,7 +384,7 @@ rule get_linear_junctions_lncRNA:
     """
     input:
         script='workflow/scripts/data/get_linear_junctions.py',
-        gtf=rules.canonical_gtf.output.gtf,
+        gtf=rules.canonical_gtf.output.ncRNA,
         lncRNA=config['processed_data'] + '/datasets/{source}/lncRNA.bed'
     output:
         junctions=config['processed_data'] + '/datasets/{source}/junctions_overlapping_lncRNA.bed'
@@ -390,12 +393,13 @@ rule get_linear_junctions_lncRNA:
 
         gtf = pr.read_gtf(input['gtf'])
         print('read GTF')
-        lncRNA = pr.read_bed(input['lncRNA'])
+        lncRNA = pr.read_bed(input['lncRNA']).drop()
         print('read lncRNA BED')
 
-        introns = gtf.features.introns(by='transcript').set_intersect(
-            lncRNA,strandedness='same',how='containment'
-        ).to_bed(output.junctions)
+        introns = gtf.overlap(lncRNA,strandedness='same') \
+            .features.introns(by='transcript') \
+            .drop_duplicate_positions(strand=True,keep='first') \
+            .drop().to_bed(output.junctions)
         print('wrote all junctions')
 
 
