@@ -11,6 +11,7 @@ from keras.regularizers import l2
 from keras import losses
 import numpy as np
 from sklearn.model_selection import train_test_split
+from collections import Counter
 
 if __name__ == "__main__":
     import sys
@@ -21,33 +22,53 @@ if __name__ == "__main__":
     np.random.seed(123)
 
     train_set = pd.read_table(snakemake.input['train_data'].__str__())
-    x_train = convert_seqs_to_matrix(train_set['encoded_seq'])
-    y_train = keras.utils.to_categorical(train_set['label'], 2)
-    x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=0.2)
+    X = convert_seqs_to_matrix(train_set['encoded_seq'])
+    y = keras.utils.to_categorical(train_set['label'], 2)
+    x_train, x_val, y_train, y_val = train_test_split(
+        X, y, test_size=0.2, stratify=train_set['label'], shuffle=True
+    )
+    # n_all = len(X)
+    # n_train = int(n_all * 0.8)
+    # print(f'all train data: {n_all}\ttrain after split: {n_train}')
+
+    # train_idx = np.random.choice(n_all, size=n_train)
+    # val_idx = [i for i in range(n_all) if i not in train_idx] 
+    # x_train = X[train_idx,:,:]
+    # y_train = y[train_idx,:]
+    # x_val = X[val_idx,:,:]
+    # y_val = y[val_idx,:]
+
+    print(x_train.shape)
+    print(x_val.shape)
+    unique, frequency = np.unique(y_val[:,1], return_counts=True)
+    print(np.asarray((unique, frequency)).T)
+
+    print(Counter(tuple(y_train[:,1])), Counter(tuple(y_val[:,1])))
+    
 
     print(f'train: {len(y_train)}\t validation: {len(y_val)}')
+    print(f'complete training data')
 
     model = Sequential()
 
-    conv_layer1 = Conv1D(filters=128,
+    conv_layer1 = Conv1D(filters=128//4,
                          kernel_size=12,
                          strides=1,
                          padding='valid',
                          activation='relu',
                          input_shape=(200, 4),
-                         kernel_regularizer=l2(0.01)
+       #                  kernel_regularizer=l2(0.01)
                 )
 
-    conv_layer2 = Conv1D(filters=128,
+    conv_layer2 = Conv1D(filters=128//4,
                          kernel_size=6,
                          strides=1,
                          padding='valid',
                          activation='relu',
-                         kernel_regularizer=l2(0.01)
+      #                   kernel_regularizer=l2(0.01)
                  )
 
     model.add(conv_layer1)
-    model.add(Dropout(0))
 
     model.add(conv_layer2)
     model.add(Dropout(0.5))
@@ -56,13 +77,15 @@ if __name__ == "__main__":
     model.add(Dropout(0.5))
 
     model.add(Flatten())
+    # model.add(Dense(8, activation='relu'))
+    # model.add(Dropout(0.5))
     model.add(Dense(2, activation='softmax'))
 
     model.summary()
 
     model.compile(
-        loss=losses.binary_crossentropy,
-        optimizer=keras.optimizers.RMSprop(learning_rate=1e-3),
+        loss=keras.losses.BinaryCrossentropy(from_logits=False),  # losses.binary_crossentropy,
+        optimizer=keras.optimizers.Adam(learning_rate=1e-3),
         metrics=['accuracy', keras.metrics.Precision(), keras.metrics.Recall()]
     )
 
@@ -71,15 +94,16 @@ if __name__ == "__main__":
         x_train, y_train,
         batch_size=128,
         epochs=80,
+        shuffle=True,
         validation_data=(x_val, y_val),
         callbacks=[
             keras.callbacks.EarlyStopping(
-                monitor="val_loss",
-                min_delta=1e-3,
+                monitor="loss",
+                min_delta=1e-2,
                 patience=3,
                 verbose=1,
             )
-        ]
+        ],
     )
 
     df = pd.DataFrame.from_dict(history.history)

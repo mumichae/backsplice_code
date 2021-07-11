@@ -32,5 +32,5 @@ if __name__ == "__main__":
     result['prediction'] = prediction.tolist()
     print(result.head())
 
-    result.to_csv(prediction_path, sep='\t')
+    result.to_csv(prediction_path, sep='\t', index=False)
 
