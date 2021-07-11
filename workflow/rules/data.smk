@@ -212,35 +212,60 @@ rule data_Wang2019:
             bed.saveas(output[i])
 
 
-rule data_lncRNA:
+rule split_lncRNA:
     input:
-        positive=rules.data_Wang2019.output.positive,
-        negative=rules.data_Chaabane2020.output.negative_bed,
+        lncRNA=rules.data_Chaabane2020.output.negative_bed,
     output:
-        positive=config['processed_data'] + '/datasets/lncRNA/circRNA.bed',
-        negative_train=config['processed_data'] + '/datasets/lncRNA/lncRNA_train.bed',
-        negative_test=config['processed_data'] + '/datasets/lncRNA/lncRNA_test.bed',
+        train=config['processed_data'] + '/datasets/lncRNA/lncRNA_train.bed',
+        test=config['processed_data'] + '/datasets/lncRNA/lncRNA_test.bed'
     run:
-        shell("cp {input.positive} {output.positive}")
         # split test and train set
-        n_all = shell("wc -l {input.negative} | cut -f1 -d' '",read=True)
+        n_all = shell("wc -l {input.lncRNA} | cut -f1 -d' '",read=True)
         n_train = int(float(n_all) * 0.9)
         shell(
             """
-            shuf {input.negative} | split -l {n_train}
-            mv xaa {output.negative_train}
-            mv xab {output.negative_test}
+            shuf {input.lncRNA} | split -l {n_train}
+            mv xaa {output.train}
+            mv xab {output.test}
             """
         )
+
+
+rule data_lncRNA:
+    input:
+        positive=rules.data_Wang2019.output.positive,
+        negative=rules.split_lncRNA.output.train,
+    output:
+        positive=config['processed_data'] + '/datasets/lncRNA/circRNA.bed',
+        negative=config['processed_data'] + '/datasets/lncRNA/lncRNA.bed'
+    shell:
+        """
+        cp {input.positive} {output.positive}
+        cp {input.negative} {output.negative}
+        """
+
+
+rule data_lncRNA_orig:
+    input:
+        positive=rules.data_Wang2019.output.positive,
+        negative=rules.split_lncRNA.output.train,
+    output:
+        positive=config['processed_data'] + '/datasets/lncRNA_orig/circRNA.bed',
+        negative=config['processed_data'] + '/datasets/lncRNA_orig/lncRNA.bed'
+    shell:
+        """
+        cp {input.positive} {output.positive}
+        cp {input.negative} {output.negative}
+        """
 
 
 rule data_lncRNA_test:
     input:
         positive=rules.data_DiLiddo2019.output.circRNA,
-        negative=rules.data_lncRNA.output.negative_test,
+        negative=rules.split_lncRNA.output.test,
     output:
         positive=config['processed_data'] + '/datasets/lncRNA_test/circRNA.bed',
-        negative=config['processed_data'] + '/datasets/lncRNA_test/lncRNA_train.bed'
+        negative=config['processed_data'] + '/datasets/lncRNA_test/lncRNA.bed'
     shell:
         """
         cp {input.positive} {output.positive}
@@ -319,9 +344,8 @@ rule get_linear_junctions:
         circ=get_positive_data,
         overlapping_transcripts=rules.get_overlapping.output.transcripts
     output:
-        junctions=config['processed_data'] + '/datasets/{source}/junctions_overlapping.bed',
+        #junctions=config['processed_data'] + '/datasets/{source}/junctions_overlapping.bed',
         flanking_junctions=config['processed_data'] + '/datasets/{source}/junctions_flanking.bed'
-    threads: 10
     run:
         import pyranges as pr
 
@@ -335,8 +359,8 @@ rule get_linear_junctions:
         introns = gtf.features.introns(by='transcript').set_intersect(
             transcripts,strandedness='same',how='containment'
         )
-        introns.to_bed(output.junctions)
-        print('wrote all junctions')
+        # introns.to_bed(output.junctions)
+        # print('wrote all junctions')
 
         flanking = introns.nearest(circ,strandedness='same')
         flanking[flanking.df['Distance'] <= 1].to_bed(output.flanking_junctions)
@@ -349,6 +373,30 @@ rule get_linear_junctions:
 #         -junc {output.junctions} \
 #         -flank_junc {output.flanking_junctions}
 #     """
+
+
+rule get_linear_junctions_lncRNA:
+    """
+    Get linear junctions subset to circular junctions
+    """
+    input:
+        script='workflow/scripts/data/get_linear_junctions.py',
+        gtf=rules.canonical_gtf.output.gtf,
+        lncRNA=config['processed_data'] + '/datasets/{source}/lncRNA.bed'
+    output:
+        junctions=config['processed_data'] + '/datasets/{source}/junctions_overlapping_lncRNA.bed'
+    run:
+        import pyranges as pr
+
+        gtf = pr.read_gtf(input['gtf'])
+        print('read GTF')
+        lncRNA = pr.read_bed(input['lncRNA'])
+        print('read lncRNA BED')
+
+        introns = gtf.features.introns(by='transcript').set_intersect(
+            lncRNA,strandedness='same',how='containment'
+        ).to_bed(output.junctions)
+        print('wrote all junctions')
 
 
 def get_negative_data(wildcards, source=None, method=None):
@@ -365,9 +413,9 @@ def get_negative_data(wildcards, source=None, method=None):
 
     if source.startswith('lncRNA'):
         if method == 'JEDI':
-            target = rules.data_lncRNA.output.negative_train
+            target = config['processed_data'] + '/datasets/{source}/lncRNA.bed'
         else:  # method = in [DeepCirCode, SVM, RandomForest]
-            target = rules.get_linear_junctions.output.junctions
+            target = rules.get_linear_junctions_lncRNA.output.junctions
     else:
         if method == 'JEDI':
             target = rules.get_overlapping.output.genes
