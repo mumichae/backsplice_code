@@ -19,8 +19,13 @@ def get_train_test(wildcards, pattern, train_test=None, source=None):
 
     if train_test == 'test':
         # NoChr has it's own test set
-        # Default test set is DiLiddo2019
-        source = 'DiLiddo2019' if source != 'NoChr' else 'NoChr_test'
+        if source == 'NoChr':
+            source = 'NoChr_test'
+        elif source == 'lncRNA_orig':
+            source = 'lncRNA_test'
+        else:
+            # Default test set is DiLiddo2019
+            source = 'DiLiddo2019'
     elif train_test == 'train':
         source = wildcards.source
     else:
@@ -118,7 +123,7 @@ rule extract_DeepCirCode_data:
     input:
         script='workflow/scripts/feature_extraction/extract_DeepCirCode_input.py',
         positive=get_positive_data,
-        negative=get_negative_data,
+        negative=lambda w: get_negative_data(w,method='DeepCirCode'),
         fasta=get_fasta
     output:
         tsv=expand(feature_pattern + '/all_data.tsv',method='DeepCirCode',allow_missing=True),

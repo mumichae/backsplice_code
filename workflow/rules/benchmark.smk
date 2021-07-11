@@ -240,12 +240,34 @@ rule test_DeepCirCode:
 
 
 rule JEDI:
-    input: expand(prediction_pattern + '/prediction.tsv', method='JEDI', source=all_sources)
+    input: expand(prediction_pattern + '/prediction.tsv',method='JEDI',source=all_sources)
 
 
 rule others:
-    input: expand(prediction_pattern + '/prediction.tsv', method=['SVM', 'RandomForest', 'DeepCirCode'], source=all_sources)
+    input:
+        expand(
+            prediction_pattern + '/prediction.tsv',
+            method=['SVM', 'RandomForest','DeepCirCode'],
+            source=all_sources
+        )
 
+
+rule lncRNA_task:
+    input:
+        predictions=expand(
+            prediction_pattern + '/prediction.tsv',
+            method=all_methods,
+            source='lncRNA_orig'
+        )
+    params:
+        methods=all_methods,
+        sources='lncRNA_orig'
+    output:
+        metrics=config['evaluation'] + '/lncRNA_task/metrics.tsv',
+        barplot=config['evaluation'] + '/lncRNA_task/overall_performance.png',
+        roc=config['evaluation'] + '/lncRNA_task/ROC.png',
+        pr=config['evaluation'] + '/lncRNA_task/PRC.png'
+    script: '../scripts/evaluation/performance_assessment.R'
 
 
 rule evaluation:
@@ -254,8 +276,7 @@ rule evaluation:
     Collect all predictions in this rule
     """
     input:
-        predictions=expand(prediction_pattern + '/prediction.tsv',zip,**get_wildcards(params_df)),
-        benchmark=expand(config['output'] + '/benchmarks/DeepCirCode_{source}.txt',zip,**get_wildcards(params_df))
+        predictions=expand(prediction_pattern + '/prediction.tsv',zip,**get_wildcards(params_df))
     params:
         methods=params_df['method'].tolist(),
         sources=params_df['source'].tolist()
@@ -272,4 +293,6 @@ rule all_benchmark:
     Collect all output of the benchmark
     """
     input:
-        metrics=rules.evaluation.output
+        expand(config['output'] + '/benchmarks/DeepCirCode_{source}.txt',zip,**get_wildcards(params_df)),
+        rules.evaluation.output,
+        rules.lncRNA_task.output

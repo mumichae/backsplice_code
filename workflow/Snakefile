@@ -19,6 +19,7 @@ def get_wildcards(params, wildcards=None):
 
 
 all_sources = params_df['source'].unique().tolist()
+all_methods = params_df['method'].unique().tolist()
 
 tmpdir = config['processed_data'] + '/tmp'
 model_pattern = config['models'] + '/{method}/{source}'

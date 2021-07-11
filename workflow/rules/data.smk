@@ -217,9 +217,9 @@ rule data_lncRNA:
         positive=rules.data_Wang2019.output.positive,
         negative=rules.data_Chaabane2020.output.negative_bed,
     output:
-        positive=config['processed_data'] + '/datasets/ncRNA/circRNA.bed',
-        negative_train=config['processed_data'] + '/datasets/ncRNA/lncRNA_train.bed',
-        negative_test=config['processed_data'] + '/datasets/ncRNA/lncRNA_test.bed',
+        positive=config['processed_data'] + '/datasets/lncRNA/circRNA.bed',
+        negative_train=config['processed_data'] + '/datasets/lncRNA/lncRNA_train.bed',
+        negative_test=config['processed_data'] + '/datasets/lncRNA/lncRNA_test.bed',
     run:
         shell("cp {input.positive} {output.positive}")
         # split test and train set
@@ -232,6 +232,20 @@ rule data_lncRNA:
             mv xab {output.negative_test}
             """
         )
+
+
+rule data_lncRNA_test:
+    input:
+        positive=rules.data_DiLiddo2019.output.circRNA,
+        negative=rules.data_lncRNA.output.negative_test,
+    output:
+        positive=config['processed_data'] + '/datasets/lncRNA_test/circRNA.bed',
+        negative=config['processed_data'] + '/datasets/lncRNA_test/lncRNA_train.bed'
+    shell:
+        """
+        cp {input.positive} {output.positive}
+        cp {input.negative} {output.negative}
+        """
 
 
 rule data_NoChr:
@@ -266,7 +280,7 @@ def get_positive_data(wildcards, source=None):
         return rules.data_DiLiddo2019.output.circRNA
     elif source == 'Wang2019':
         return rules.data_Wang2019.output.positive
-    elif source == 'lncRNA':
+    elif source.startswith('lncRNA'):
         return rules.data_lncRNA.output.positive
     elif source == 'NoChr':
         return rules.data_NoChr.output.train
