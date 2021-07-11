@@ -17,17 +17,17 @@ def parser():
     parser.add_argument('-pos', type=str, required=True, dest='out_pos',
                         help='The output file for circRNA junctions (positive data)')
     parser.add_argument('-neg', type=str, required=True, dest='out_neg',
-                        help='The output file for transcripts overlapping with circRNA (negative data)')
+                        help='The output file for gene sequences (negative data)')
     parser.add_argument('-exons', type=str, required=True, dest='exons',
-                        help='The file location of the genome sequence (must be in fasta format)')
-    parser.add_argument('-transcripts', type=str, required=True, dest='transcripts',
-                        help='The file location of the genome sequence (must be in fasta format)')
+                        help='GTF of exons for overlapping gene/circRNA regions')
+    parser.add_argument('-genes', type=str, required=True, dest='genes',
+                        help='GTF of genes considered for negative dataset')
     parser.add_argument('-circ', type=str, required=True, dest='positive',
                         help='The file location of the positive data\'s bed file')
     parser.add_argument('-fasta', type=str, required=True, dest='fasta',
                         help='FASTA file')
-    parser.add_argument('-id_key', type=str, default='transcript_id', dest='id_key',
-                        help='Attribute key in GTF for transcript ID')
+    parser.add_argument('-id_key', type=str, default='gene_id', dest='id_key',
+                        help='Attribute key in GTF for gene ID')
     parser.add_argument('-tmp', type=str, default='/tmp', dest='tmpdir',
                         help='Temporary directory path')
     parser.add_argument('-threads', type=int, default=2, dest='threads',
@@ -44,60 +44,60 @@ def parse_gtf(filename, id_key):
     return gtf[BED_COLNAMES].drop_duplicates()
 
 
-def extract_from_bed(transcripts, exons_df, fasta_file, output_path, n_jobs):
+def extract_from_bed(genes, exons_df, fasta_file, output_path, n_jobs):
     """
     Writes one dictionary per line with
-        sequence: sequence of transcript (including introns)
+        sequence: sequence of gene (including introns)
         strand: + or -
         junctions:
-            head: list of splice acceptor sites relative to transcript
-            tail: list of splice donor sites relative to transcript
+            head: list of splice acceptor sites relative to gene
+            tail: list of splice donor sites relative to gene
 
-    :param transcripts: pybedtools.BedTool or pandas dataframe (0-based) of transcripts/circRNA BSJ
+    :param genes: pybedtools.BedTool or pandas dataframe (0-based) of genes/circRNA BSJ
     :param exons_df: pandas dataframe (0-based) of all exons in annotation
     :param output_path: path of file to write parsed information to
     """
-    if isinstance(transcripts, BedTool):
-        tx_df = transcripts.to_dataframe()
-        tx_bed = transcripts
-    elif isinstance(transcripts, pd.DataFrame):
-        tx_df = transcripts
-        tx_bed = BedTool.from_dataframe(transcripts)
+    if isinstance(genes, BedTool):
+        gene_df = genes.to_dataframe()
+        gene_bed = genes
+    elif isinstance(genes, pd.DataFrame):
+        gene_df = genes
+        gene_bed = BedTool.from_dataframe(genes)
     else:
-        raise TypeError('invalid type for transcripts')
+        raise TypeError('invalid type for genes')
 
-    # extract fasta sequences of transcripts
-    tx_bed = tx_bed.sequence(fi=fasta_file)
-    fasta_records = SeqIO.parse(tx_bed.seqfn, "fasta")
+    # extract fasta sequences of genes
+    gene_bed = gene_bed.sequence(fi=fasta_file)
+    fasta_records = SeqIO.parse(gene_bed.seqfn, "fasta")
 
     def extract_features(input_tuple, exons_df):
         # unpack input
-        tx_row, record = input_tuple
-        _, transcript = tx_row
+        gene, record = input_tuple
+        _, gene = gene
 
-        # get exons regions per transcript
+        # get exons regions per gene
         exons = exons_df[
-            (exons_df['chrom'] == transcript['chrom']) &
-            (exons_df['strand'] == transcript['strand']) &
-            (exons_df['start'] >= transcript['start']) &
-            (exons_df['end'] <= transcript['end']) &
-            (exons_df['name'] == transcript['name'])
+            (exons_df['chrom'] == gene['chrom']) &
+            (exons_df['strand'] == gene['strand']) &
+            (exons_df['start'] >= gene['start']) &
+            (exons_df['end'] <= gene['end']) &
+            (exons_df['name'] == gene['name'])
             ]
         if exons.shape[0] == 0:
-            exons = exons.append(transcript, ignore_index=True)
+            exons = exons.append(gene, ignore_index=True)
 
         # translate exon regions into relative positions & determine head/tail
-        head = exons['start'] - transcript['start']
-        tail = exons['end'] - transcript['start']
+        head = exons['start'] - gene['start']
+        tail = exons['end'] - gene['start']
 
         del exons
 
         return dict(
-            name=transcript['name'],  # optional
-            chr=transcript['chrom'],  # optional
-            start=transcript['start'],  # optional
-            end=transcript['end'],  # optional
-            strand=transcript['strand'][0],
+            name=gene['name'],  # optional
+            chr=gene['chrom'],  # optional
+            start=gene['start'],  # optional
+            end=gene['end'],  # optional
+            strand=gene['strand'][0],
             junctions=dict(
                 head=head.sort_values().tolist(),
                 tail=tail.sort_values().tolist()
@@ -107,7 +107,7 @@ def extract_from_bed(transcripts, exons_df, fasta_file, output_path, n_jobs):
 
     features = Parallel(n_jobs=n_jobs, verbose=1, backend="loky", max_nbytes=10, batch_size=300)(
         delayed(extract_features)(input_tuple, exons_df)
-        for input_tuple in zip(tx_df.iterrows(), fasta_records)
+        for input_tuple in zip(gene_df.iterrows(), fasta_records)
     )
     print(f'{len(features)} entries computed')
 
@@ -130,31 +130,28 @@ if __name__ == "__main__":
     circ_bed = BedTool.from_dataframe(circ)
 
     exons = parse_gtf(args.exons, id_key)
-    transcripts = parse_gtf(args.transcripts, id_key)
+    genes = parse_gtf(args.genes, id_key)
 
     exons_bed = BedTool.from_dataframe(exons)
-    transcripts_bed = BedTool.from_dataframe(transcripts)
+    genes_bed = BedTool.from_dataframe(genes)
 
-    # subset transcripts to only overlapping with circRNA junctions
-    transcripts_bed = transcripts_bed.intersect(circ_bed, s=True, u=True)
-
-    # map linear transcript IDs to circRNA junctions
-    anno_circ_df = circ_bed.intersect(transcripts_bed, s=True, wa=True, wb=True, loj=True).to_dataframe()
+    # map linear gene IDs to circRNA junctions
+    anno_circ_df = circ_bed.intersect(genes_bed, s=True, wa=True, wb=True, loj=True).to_dataframe()
     anno_circ_df['name'] = anno_circ_df[['blockCount']]  # blockCount contains name from second BED
     circ_df = anno_circ_df[BED_COLNAMES].drop_duplicates([x for x in BED_COLNAMES if x != 'name'])
 
     print('Extract circRNA features')
     extract_from_bed(
-        transcripts=circ_df,
+        genes=circ_df,
         exons_df=exons,
         fasta_file=fasta_file,
         output_path=args.out_pos,
         n_jobs=args.threads
     )
 
-    print('Extract linear transcript features')
+    print('Extract linear gene features')
     extract_from_bed(
-        transcripts=transcripts_bed,
+        genes=genes_bed,
         exons_df=exons,
         fasta_file=fasta_file,
         output_path=args.out_neg,
