@@ -426,4 +426,7 @@ def get_test_data(wildcards, source=None):
 rule all_data:
     input:
         positive=lambda w: [get_positive_data(w,source=source) for source in all_sources],
-        negative=lambda w: [get_negative_data(w,source=source) for source in all_sources]
+        negative=lambda w: [
+            get_negative_data(w,source=source,method=method)
+            for source in all_sources for method in all_methods
+        ]
