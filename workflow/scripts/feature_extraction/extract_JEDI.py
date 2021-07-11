@@ -21,7 +21,7 @@ def parser():
     parser.add_argument('-exons', type=str, required=True, dest='exons',
                         help='GTF of exons for overlapping gene/circRNA regions')
     parser.add_argument('-genes', type=str, required=True, dest='genes',
-                        help='GTF of genes considered for negative dataset')
+                        help='GTF or BED of genes considered for negative dataset')
     parser.add_argument('-circ', type=str, required=True, dest='positive',
                         help='The file location of the positive data\'s bed file')
     parser.add_argument('-fasta', type=str, required=True, dest='fasta',
@@ -80,8 +80,7 @@ def extract_from_bed(genes, exons_df, fasta_file, output_path, n_jobs):
             (exons_df['chrom'] == gene['chrom']) &
             (exons_df['strand'] == gene['strand']) &
             (exons_df['start'] >= gene['start']) &
-            (exons_df['end'] <= gene['end']) &
-            (exons_df['name'] == gene['name'])
+            (exons_df['end'] <= gene['end'])
             ]
         if exons.shape[0] == 0:
             exons = exons.append(gene, ignore_index=True)
@@ -130,19 +129,23 @@ if __name__ == "__main__":
     circ_bed = BedTool.from_dataframe(circ)
 
     exons = parse_gtf(args.exons, id_key)
-    genes = parse_gtf(args.genes, id_key)
+    if args.genes.endswith('.bed'):
+        genes = pd.read_table(args.genes, names=BED_COLNAMES)
+        genes[id_key] = genes['name']
+    else:
+        genes = parse_gtf(args.genes, id_key)
 
     exons_bed = BedTool.from_dataframe(exons)
     genes_bed = BedTool.from_dataframe(genes)
 
     # map linear gene IDs to circRNA junctions
-    anno_circ_df = circ_bed.intersect(genes_bed, s=True, wa=True, wb=True, loj=True).to_dataframe()
-    anno_circ_df['name'] = anno_circ_df[['blockCount']]  # blockCount contains name from second BED
-    circ_df = anno_circ_df[BED_COLNAMES].drop_duplicates([x for x in BED_COLNAMES if x != 'name'])
+    # anno_circ_df = circ_bed.intersect(genes_bed, s=True, wa=True, wb=True, loj=True).to_dataframe()
+    # anno_circ_df['name'] = anno_circ_df[['blockCount']]  # blockCount contains name from second BED
+    # circ_df = anno_circ_df[BED_COLNAMES].drop_duplicates([x for x in BED_COLNAMES if x != 'name'])
 
     print('Extract circRNA features')
     extract_from_bed(
-        genes=circ_df,
+        genes=circ,
         exons_df=exons,
         fasta_file=fasta_file,
         output_path=args.out_pos,
