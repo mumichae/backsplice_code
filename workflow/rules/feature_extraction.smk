@@ -155,5 +155,7 @@ rule SVM_RF_features:
     output:
         test_features=expand(feature_pattern + 'test.rds',method='SVM_RF',allow_missing=True),
         train_features=expand(feature_pattern + 'train.rds',method='SVM_RF',allow_missing=True),
+	test_features_2=expand(feature_pattern + 'test.tsv',method='SVM_RF',allow_missing=True),
+        train_features_2=expand(feature_pattern + 'train.tsv',method='SVM_RF',allow_missing=True),
     script:
         '../scripts/data/wang_2019.R'
