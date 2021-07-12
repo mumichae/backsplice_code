@@ -16,6 +16,7 @@ dependencies:
   - ujson
   - gtfparse
   - pyranges
+  - umap-learn
   - rsync
   - joblib
   - r-base

@@ -109,29 +109,23 @@ rule collect_features_JEDI:
             L=config['methods']['JEDI']['flank_len'],
             train_test='test',
             allow_missing=True
-        ),
+        )[0],
         train=expand(
             rules.extract_features_JEDI.output,
             K=config['methods']['JEDI']['kmer_len'],
             L=config['methods']['JEDI']['flank_len'],
             train_test='train',
             allow_missing=True
-        )
+        )[0]
     output:
-        plot=expand(feature_pattern + '/umap_acceptor.png',method='JEDI',allow_missing=True)
-    conda:
-        '../envs/jupyter_nb.yml'
-    log:
-        # optional path to the processed notebook
-        notebook="logs/notebooks/processed_umap.ipynb"
-    notebook:
-        "../notebooks/umap.py.ipynb"
+        plot='results/features/JEDI/{source}_umap.png'
+    script:
+        "../scripts/feature_extraction/umap_JEDI.py"
 
 
 rule all_extract_features_JEDI:
     input:
-        train=expand(rules.collect_features_JEDI.input.train,source=all_sources + ['lncRNA_orig']),
-        test=expand(rules.collect_features_JEDI.input.test,source=all_sources + ['lncRNA_orig'])
+        expand(rules.collect_features_JEDI.output,source=all_sources + ['lncRNA_orig']),
 
 
 rule extract_DeepCirCode_data:
@@ -159,6 +153,17 @@ rule extract_DeepCirCode_data:
         """
 
 
+rule umap_DeepCirCode:
+    input:
+        common='workflow/scripts',
+        test=lambda w: get_train_test(w,rules.extract_DeepCirCode_data.output.tsv,train_test='test')[0],
+        train=lambda w: get_train_test(w,rules.extract_DeepCirCode_data.output.tsv,train_test='train')[0],
+    output:
+        plot='results/features/DeepCirCode/{source}_umap.png'
+    script:
+        "../scripts/feature_extraction/umap_DeepCirCode.py"
+
+
 rule all_extract_DeepCirCode_data:
     input: expand(rules.extract_DeepCirCode_data.output,source=all_sources + ['lncRNA_orig'])
 
@@ -177,3 +182,22 @@ rule SVM_RF_features:
         train_features_2=expand(feature_pattern + 'train.tsv',method='SVM_RF',allow_missing=True),
     script:
         '../scripts/data/wang_2019.R'
+
+
+rule umap_frequencies:
+    input:
+        train=rules.SVM_RF_features.output.train_features_2,
+        test=rules.SVM_RF_features.output.test_features_2,
+        train_labels=lambda w: get_train_test(w,rules.extract_DeepCirCode_data.output.labels,train_test='train')[0],
+        test_labels=lambda w: get_train_test(w,rules.extract_DeepCirCode_data.output.labels,train_test='test')[0],
+    output:
+        plot='results/features/frequencies/{source}_umap.png'
+    script:
+        "../scripts/feature_extraction/umap_frequencies.py"
+
+
+rule umap:
+    input:
+        expand(rules.umap_DeepCirCode.output,source=all_sources + ['lncRNA_orig']),
+        expand(rules.umap_frequencies.output,source=all_sources + ['lncRNA_orig']),
+        expand(rules.collect_features_JEDI.output,source=all_sources + ['lncRNA_orig']),
