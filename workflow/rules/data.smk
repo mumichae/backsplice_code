@@ -422,7 +422,7 @@ def get_negative_data(wildcards, source=None, method=None):
             target = rules.get_linear_junctions_lncRNA.output.junctions
     else:
         if method == 'JEDI':
-            target = rules.get_overlapping.output.genes
+            target = rules.get_overlapping.output.transcripts
         else:  # method = in [DeepCirCode, SVM, RandomForest]
             target = rules.get_linear_junctions.output.flanking_junctions
     return expand(target,source=source)[0]

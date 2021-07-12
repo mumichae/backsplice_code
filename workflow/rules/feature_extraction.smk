@@ -1,5 +1,7 @@
 include: "data.smk"
 
+all_features = 'results/features'
+
 
 def get_train_test(wildcards, pattern, train_test=None, source=None):
     """
@@ -101,19 +103,35 @@ rule extract_features_JEDI:
 
 rule collect_features_JEDI:
     input:
-        expand(
+        test=expand(
             rules.extract_features_JEDI.output,
-            method='JEDI',
             K=config['methods']['JEDI']['kmer_len'],
             L=config['methods']['JEDI']['flank_len'],
-            train_test=['train', 'test'],
+            train_test='test',
+            allow_missing=True
+        ),
+        train=expand(
+            rules.extract_features_JEDI.output,
+            K=config['methods']['JEDI']['kmer_len'],
+            L=config['methods']['JEDI']['flank_len'],
+            train_test='train',
             allow_missing=True
         )
+    output:
+        plot=expand(feature_pattern + '/umap_acceptor.png',method='JEDI',allow_missing=True)
+    conda:
+        '../envs/jupyter_nb.yml'
+    log:
+        # optional path to the processed notebook
+        notebook="logs/notebooks/processed_umap.ipynb"
+    notebook:
+        "../notebooks/umap.py.ipynb"
 
 
 rule all_extract_features_JEDI:
     input:
-        expand(rules.collect_features_JEDI.input,source=all_sources + ['lncRNA_orig'])
+        train=expand(rules.collect_features_JEDI.input.train,source=all_sources + ['lncRNA_orig']),
+        test=expand(rules.collect_features_JEDI.input.test,source=all_sources + ['lncRNA_orig'])
 
 
 rule extract_DeepCirCode_data:
@@ -155,7 +173,7 @@ rule SVM_RF_features:
     output:
         test_features=expand(feature_pattern + 'test.rds',method='SVM_RF',allow_missing=True),
         train_features=expand(feature_pattern + 'train.rds',method='SVM_RF',allow_missing=True),
-	test_features_2=expand(feature_pattern + 'test.tsv',method='SVM_RF',allow_missing=True),
+        test_features_2=expand(feature_pattern + 'test.tsv',method='SVM_RF',allow_missing=True),
         train_features_2=expand(feature_pattern + 'train.tsv',method='SVM_RF',allow_missing=True),
     script:
         '../scripts/data/wang_2019.R'
