@@ -1,0 +1,10 @@
+Query_ID	Target_ID	Optimal_offset	p-value	E-value	q-value	Overlap	Query_consensus	Target_consensus	Orientation
+M_n5	RNCMPT00268	-2	0.000390076	0.0397877	0.0188383	7	AAUUUCUCUUGU	CUUUUCU	+
+M_n5	RNCMPT00274	-2	0.000431528	0.0440158	0.0188383	7	AAUUUCUCUUGU	UUUUUUU	+
+M_n7	RNCMPT00079	-1	0.000124727	0.0127222	0.0112698	7	UUUUUUACAGGU	UUUUUUC	+
+M_n10	RNCMPT00274	0	0.000136176	0.0138899	0.0120733	7	UUUUUUUAAGUA	UUUUUUU	+
+M_n22	RNCMPT00032	-1	0.000128989	0.0131569	0.0116022	7	GUUAUUUUUUAG	UUAUUUU	+
+
+# Tomtom (Motif Comparison Tool): Version 5.3.3 compiled on Feb 21 2021 at 14:52:43
+# The format of this file is described at https://meme-suite.org/meme/doc/tomtom-output-format.html.
+# tomtom -no-ssc -oc . -verbosity 1 -min-overlap 5 -dist pearson -evalue -thresh 0.05 motifs.txt db/RNA/Ray2013_rbp_Homo_sapiens.meme
