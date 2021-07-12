@@ -7,8 +7,8 @@ if __name__ == "__main__":
 
     train_data = pd.read_table(snakemake.input['train'].__str__(), header=None, index_col=0)
     test_data = pd.read_table(snakemake.input['test'].__str__(), header=None, index_col=0)
-    train_labels = [int(l.strip()[0]) for l in open(snakemake.input['train_labels'].__str__(), 'r')]
-    test_labels = [int(l.strip()[0]) for l in open(snakemake.input['test_labels'].__str__(), 'r')]
+    train_labels = [int(l.strip()[1]) for l in open(snakemake.input['train_labels'].__str__(), 'r')]
+    test_labels = [int(l.strip()[1]) for l in open(snakemake.input['test_labels'].__str__(), 'r')]
     
     train_data['data'] = 'train'
     test_data['data'] = 'test'
